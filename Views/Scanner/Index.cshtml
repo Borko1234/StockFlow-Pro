@@ -1,0 +1,72 @@
+@model StockFlowPro.ViewModels.ScannerViewModel
+
+@{
+    ViewData["Title"] = "Scanner Station";
+}
+
+<div class="container">
+    <h2 class="mb-4">Scanner Station</h2>
+
+    <!-- Search Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form asp-action="Index" method="get" class="row g-3">
+                <div class="col-auto">
+                    <label for="orderId" class="col-form-label">Order ID:</label>
+                </div>
+                <div class="col-auto">
+                    <input type="number" class="form-control" id="orderId" name="orderId" value="@Model.OrderId" placeholder="Enter Order ID">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </form>
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <div class="alert alert-danger mt-3">@Model.ErrorMessage</div>
+            }
+        </div>
+    </div>
+
+    @if (Model.CurrentOrder != null)
+    {
+        <!-- Order Details & Assignment -->
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                Order Found: #@Model.CurrentOrder.Id
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Facility</dt>
+                    <dd class="col-sm-9">@Model.CurrentOrder.Facility?.Name</dd>
+
+                    <dt class="col-sm-3">Status</dt>
+                    <dd class="col-sm-9">@Model.CurrentOrder.OrderStatus</dd>
+
+                    <dt class="col-sm-3">Total Amount</dt>
+                    <dd class="col-sm-9">@Model.CurrentOrder.TotalAmount.ToString("C")</dd>
+                </dl>
+
+                <hr />
+
+                <form asp-action="Assign" method="post">
+                    <input type="hidden" asp-for="OrderId" value="@Model.CurrentOrder.Id" />
+                    
+                    <div class="mb-3">
+                        <label asp-for="SelectedEmployeeId" class="form-label">Select Employee</label>
+                        <select asp-for="SelectedEmployeeId" class="form-select" asp-items="@(new SelectList(Model.Employees, "Id", "FullName"))">
+                            <option value="">-- Select Employee --</option>
+                        </select>
+                        <span asp-validation-for="SelectedEmployeeId" class="text-danger"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-success btn-lg">Assign & Start Scanning</button>
+                </form>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

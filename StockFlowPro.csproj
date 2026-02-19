@@ -7,6 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="StockFlowPro.Client\**" />
+    <Content Remove="StockFlowPro.Client\**" />
+    <EmbeddedResource Remove="StockFlowPro.Client\**" />
+    <None Remove="StockFlowPro.Client\**" />
+    <Compile Remove="StockFlowPro.Client.Tests\**" />
+    <Content Remove="StockFlowPro.Client.Tests\**" />
+    <EmbeddedResource Remove="StockFlowPro.Client.Tests\**" />
+    <None Remove="StockFlowPro.Client.Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
