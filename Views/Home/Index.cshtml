@@ -1,0 +1,43 @@
+@model StockFlowPro.ViewModels.HomeViewModel
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome, @Model.UserName!</h1>
+    <p>Here are today's orders (@DateTime.Today.ToShortDateString())</p>
+
+    @if (Model.TodaysOrders != null && Model.TodaysOrders.Any())
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Order Id</th>
+                    <th>Facility Name</th>
+                    <th>Status</th>
+                    <th>Total Amount</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in Model.TodaysOrders)
+                {
+                    <tr>
+                        <td>@order.Id</td>
+                        <td>@order.Facility?.Name</td>
+                        <td>@order.OrderStatus</td>
+                        <td>@order.TotalAmount.ToString("C")</td>
+                        <td>@order.CreatedAt.ToString("g")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            No orders for today.
+        </div>
+    }
+</div>
