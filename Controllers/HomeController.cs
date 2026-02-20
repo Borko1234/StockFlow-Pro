@@ -27,17 +27,15 @@ namespace StockFlowPro.Controllers
             var user = await _userManager.GetUserAsync(User);
             var userName = user?.UserName ?? User.Identity.Name;
 
-            var today = DateTime.Today;
             var orders = await _context.Orders
                 .Include(o => o.Facility)
-                .Where(o => o.CreatedAt.Date == today)
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
 
             var model = new HomeViewModel
             {
                 UserName = userName,
-                TodaysOrders = orders
+                Orders = orders
             };
 
             return View(model);

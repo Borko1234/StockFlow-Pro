@@ -7,6 +7,6 @@ namespace StockFlowPro.ViewModels
     public class HomeViewModel
     {
         public string UserName { get; set; }
-        public List<Order> TodaysOrders { get; set; }
+        public List<Order> Orders { get; set; }
     }
 }

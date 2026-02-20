@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StockFlowPro.Data;
 using StockFlowPro.Services;
+using StockFlowPro.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,6 +52,8 @@ using (var scope = app.Services.CreateScope())
         
         // Custom Seeding (Admin User)
         await DbInitializer.Initialize(services);
+        // Domain data seeding
+        await SeedData.Initialize(services);
     }
     catch (Exception ex)
     {
