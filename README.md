@@ -7,11 +7,6 @@ This solution contains two applications:
     -   Run Command: `dotnet run` (from the root folder)
     -   Access: http://localhost:5243
 
-2.  **StockFlowPro.Client (Desktop App)**: A WPF Desktop application with MVVM architecture.
-    -   Location: `D:\StockFlow-Pro\StockFlow-Pro\StockFlowPro.Client`
-    -   Run Command: `dotnet run` (from the Client folder)
-    -   Features: Scanner View, Products View, Offline capabilities.
-
 ## Quickstart: Run the Website
 - Install .NET SDK 9.0
 - In the project root (`D:\StockFlow-Pro\StockFlow-Pro`), run: `dotnet run`
