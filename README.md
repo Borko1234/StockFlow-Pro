@@ -12,6 +12,14 @@ This solution contains two applications:
     -   Run Command: `dotnet run` (from the Client folder)
     -   Features: Scanner View, Products View, Offline capabilities.
 
+## Quickstart: Run the Website
+- Install .NET SDK 9.0
+- In the project root (`D:\StockFlow-Pro\StockFlow-Pro`), run: `dotnet run`
+- Open: http://localhost:5243/
+- Database: SQLite file `app.db` is created automatically
+- Admin login (seeded): `admin@foodie.com` / `Admin123!`
+- Alternate self-host ports: http://localhost:5000 and https://localhost:5001
+
 ## Troubleshooting
 
 ### "Application launches in a new window"
@@ -20,3 +28,7 @@ If you want the Web Application, ensure you are in the root folder (`D:\StockFlo
 
 ### Build Errors
 The `StockFlowPro.csproj` has been configured to exclude the `StockFlowPro.Client` folder to prevent build conflicts, as the Client folder is nested inside the Web App folder.
+
+### Port or binary lock
+If the build fails due to a locked `StockFlowPro.exe`, stop any running instance and retry:
+- Windows PowerShell: `Get-Process -Name StockFlowPro -ErrorAction SilentlyContinue | Stop-Process -Force`
