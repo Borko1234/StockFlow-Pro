@@ -6,7 +6,7 @@ namespace StockFlowPro.ViewModels
     public class ProductsViewModel
     {
         public int OrderId { get; set; }
-        public Order CurrentOrder { get; set; }
+        public StockFlowPro.Models.Order CurrentOrder { get; set; }
         
         // Using a dictionary to track scanned quantities or a separate list?
         // For simplicity, we can just use the OrderItems and maybe a client-side or session-based tracking of "scanned" status if not persisting immediately.

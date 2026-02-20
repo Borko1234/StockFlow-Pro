@@ -12,7 +12,7 @@ namespace StockFlowPro.Models
         public int FacilityId { get; set; }
         public Facility Facility { get; set; }
 
-        public OrderStatus OrderStatus { get; set; } = OrderStatus.Created;
+        public OrderStatus OrderStatus { get; set; } = OrderStatus.Pending;
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalAmount { get; set; }

@@ -12,7 +12,10 @@ namespace StockFlowPro.Models
         public string Brand { get; set; }
         
         [Column(TypeName = "decimal(18,2)")]
-        public decimal Price { get; set; }
+        public decimal Price { get; set; } // Selling Price
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal CostPrice { get; set; } // Cost Price for Profit Calc
         
         public int QuantityInStock { get; set; }
         public int MinimumStockLevel { get; set; }

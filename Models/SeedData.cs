@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Identity;
 using StockFlowPro.Data;
 using StockFlowPro.Models.Enums;
 
@@ -21,7 +22,9 @@ namespace StockFlowPro.Models
                 return;
             }
 
-            var employees = BuildEmployees();
+            var userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
+
+            var employees = await BuildEmployees(userManager);
             context.Employees.AddRange(employees);
 
             var facilities = BuildFacilities();
@@ -44,14 +47,13 @@ namespace StockFlowPro.Models
             if (context.Facilities.Count() != 30) throw new Exception("Expected exactly 30 facilities.");
             if (context.Orders.Count() != 30) throw new Exception("Expected exactly 30 orders.");
             if (!context.Products.Any(p => p.QuantityInStock == 0)) throw new Exception("Missing zero-stock product example.");
-            if (context.Orders.Count(o => o.OrderStatus == OrderStatus.Created) == 0) throw new Exception("Missing Created orders.");
-            if (context.Orders.Count(o => o.OrderStatus == OrderStatus.Prepared) == 0) throw new Exception("Missing Prepared orders.");
+            if (context.Orders.Count(o => o.OrderStatus == OrderStatus.Pending) == 0) throw new Exception("Missing Pending orders.");
             if (context.Orders.Count(o => o.OrderStatus == OrderStatus.Scanned) == 0) throw new Exception("Missing Scanned orders.");
             if (context.Orders.Count(o => o.OrderStatus == OrderStatus.Delivered) == 0) throw new Exception("Missing Delivered orders.");
             if (!context.Orders.Any(o => o.OrderItems.Count > 1)) throw new Exception("Missing multi-line order example.");
         }
 
-        private static List<Employee> BuildEmployees()
+        private static async Task<List<Employee>> BuildEmployees(UserManager<IdentityUser> userManager)
         {
             var names = new[]
             {
@@ -77,17 +79,30 @@ namespace StockFlowPro.Models
                 "Teodor Vitaliev Rodyukov"
             };
 
-            var positions = new[] { "Office", "Scanner", "Driver", "Packer" };
+            var positions = new[] { "OfficeWorker", "Scanner", "Packer" }; // Removed Driver
 
             var list = new List<Employee>();
             for (int i = 0; i < 20; i++)
             {
+                var email = $"emp{i}@foodie.com";
+                var user = await userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    user = new IdentityUser { UserName = email, Email = email, EmailConfirmed = true };
+                    await userManager.CreateAsync(user, "Password123!");
+                    
+                    // Assign Role
+                    var role = positions[i % positions.Length];
+                    await userManager.AddToRoleAsync(user, role);
+                }
+
                 list.Add(new Employee
                 {
                     FullName = names[i],
                     Position = positions[i % positions.Length],
                     Phone = $"+359 88{(i + 10):D2} {((i + 1234) % 1000):D3} {(i * 37 + 555) % 1000:D3}",
-                    IsActive = true
+                    IsActive = true,
+                    UserId = user.Id
                 });
             }
             return list;
@@ -191,9 +206,9 @@ namespace StockFlowPro.Models
             {
                 var status = (n % 4) switch
                 {
-                    1 => OrderStatus.Created,
-                    2 => OrderStatus.Prepared,
-                    3 => OrderStatus.Scanned,
+                    1 => OrderStatus.Pending,
+                    2 => OrderStatus.Scanned,
+                    3 => OrderStatus.Scanned, // Mapping multiple to Scanned as Pending->Scanned->Delivered
                     _ => OrderStatus.Delivered
                 };
 
@@ -259,7 +274,7 @@ namespace StockFlowPro.Models
                 order.OrderProcessing = new OrderProcessing
                 {
                     CreatedByEmployeeId = createdBy.Id,
-                    PreparedByEmployeeId = status >= OrderStatus.Prepared ? preparedBy.Id : null,
+                    PreparedByEmployeeId = status >= OrderStatus.Scanned ? preparedBy.Id : null,
                     ScannedByEmployeeId = status >= OrderStatus.Scanned ? scannedBy.Id : null,
                     ProcessDate = DateTime.UtcNow.AddDays(-n).AddHours(1 + (n % 8))
                 };

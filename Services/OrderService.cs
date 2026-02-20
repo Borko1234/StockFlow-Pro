@@ -26,7 +26,7 @@ namespace StockFlowPro.Services
             var order = new Order
             {
                 FacilityId = facilityId,
-                OrderStatus = OrderStatus.Created,
+                OrderStatus = OrderStatus.Pending,
                 CreatedAt = DateTime.Now,
                 OrderItems = new List<OrderItem>()
             };
@@ -75,9 +75,9 @@ namespace StockFlowPro.Services
             // Business Logic: Decrease stock when moving to Prepared or Delivered (assuming Prepared is the commitment step)
             // The prompt says: "When order moves to Prepared or Completed, decrease Product.QuantityInStock."
             // We should ensure we only do this ONCE. 
-            // If current status is Created and new is Prepared -> Decrease.
+            // If current status is Pending and new is Scanned or Delivered -> Decrease.
             
-            if (order.OrderStatus == OrderStatus.Created && (newStatus == OrderStatus.Prepared || newStatus == OrderStatus.Delivered))
+            if (order.OrderStatus == OrderStatus.Pending && (newStatus == OrderStatus.Scanned || newStatus == OrderStatus.Delivered))
             {
                 foreach (var item in order.OrderItems)
                 {
@@ -100,10 +100,10 @@ namespace StockFlowPro.Services
             var order = await _context.Orders.FindAsync(orderId);
             if (order == null) return false;
 
-            // RULE: If Created -> Prepared
-            if (order.OrderStatus == OrderStatus.Created)
+            // RULE: If Pending -> Scanned
+            if (order.OrderStatus == OrderStatus.Pending)
             {
-                return await UpdateOrderStatusAsync(orderId, OrderStatus.Prepared);
+                return await UpdateOrderStatusAsync(orderId, OrderStatus.Scanned);
             }
 
             // Optional: If Prepared -> Scanned? The prompt says "Subsequent actions will move it to Scanned and Delivered".

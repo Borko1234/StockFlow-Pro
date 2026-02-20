@@ -16,36 +16,65 @@ namespace StockFlowPro.Data
                 serviceProvider.GetRequiredService<DbContextOptions<FoodieDbContext>>()))
             {
                 context.Database.EnsureCreated();
-
-                // Look for any users.
-                if (context.Users.Any())
-                {
-                    return;   // DB has been seeded
-                }
             }
 
             var userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
-            string roleName = "Admin";
-            if (!await roleManager.RoleExistsAsync(roleName))
+            // Removed "Driver" from roles
+            string[] roleNames = { "Admin", "OfficeWorker", "Scanner", "Packer" };
+            foreach (var roleName in roleNames)
             {
-                await roleManager.CreateAsync(new IdentityRole(roleName));
+                if (!await roleManager.RoleExistsAsync(roleName))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(roleName));
+                }
             }
 
-            var user = new IdentityUser
+            // Seed Admin User
+            var adminEmail = "admin@foodie.com";
+            if (await userManager.FindByEmailAsync(adminEmail) == null)
             {
-                UserName = "admin@foodie.com",
-                Email = "admin@foodie.com",
-                EmailConfirmed = true
-            };
-
-            var result = await userManager.CreateAsync(user, "Admin123!");
-
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(user, roleName);
+                var user = new IdentityUser
+                {
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    EmailConfirmed = true
+                };
+                var result = await userManager.CreateAsync(user, "Admin123!");
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(user, "Admin");
+                }
             }
+
+            // Seed Office Worker
+            var officeEmail = "office@foodie.com";
+            if (await userManager.FindByEmailAsync(officeEmail) == null)
+            {
+                var user = new IdentityUser { UserName = officeEmail, Email = officeEmail, EmailConfirmed = true };
+                var result = await userManager.CreateAsync(user, "Office123!");
+                if (result.Succeeded) await userManager.AddToRoleAsync(user, "OfficeWorker");
+            }
+
+            // Seed Scanner
+            var scannerEmail = "scanner@foodie.com";
+            if (await userManager.FindByEmailAsync(scannerEmail) == null)
+            {
+                var user = new IdentityUser { UserName = scannerEmail, Email = scannerEmail, EmailConfirmed = true };
+                var result = await userManager.CreateAsync(user, "Scanner123!");
+                if (result.Succeeded) await userManager.AddToRoleAsync(user, "Scanner");
+            }
+
+            // Seed Packer
+            var packerEmail = "packer@foodie.com";
+            if (await userManager.FindByEmailAsync(packerEmail) == null)
+            {
+                var user = new IdentityUser { UserName = packerEmail, Email = packerEmail, EmailConfirmed = true };
+                var result = await userManager.CreateAsync(user, "Packer123!");
+                if (result.Succeeded) await userManager.AddToRoleAsync(user, "Packer");
+            }
+
+            // Removed Driver Seeding
         }
     }
 }

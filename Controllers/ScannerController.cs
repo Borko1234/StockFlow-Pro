@@ -12,6 +12,7 @@ using StockFlowPro.ViewModels;
 namespace StockFlowPro.Controllers
 {
     [Authorize]
+    [Authorize(Roles = "Scanner,Admin")]
     public class ScannerController : Controller
     {
         private readonly FoodieDbContext _context;
@@ -79,11 +80,11 @@ namespace StockFlowPro.Controllers
                     // Assign Employee
                     order.OrderProcessing.PreparedByEmployeeId = model.SelectedEmployeeId.Value;
                     
-                    // Update Status if Created -> Prepared
-                    if (order.OrderStatus == OrderStatus.Created)
+                    // Update Status if Pending -> Scanned
+                    if (order.OrderStatus == OrderStatus.Pending)
                     {
                         // Using Service to handle status transition logic (stock check etc)
-                        // But wait, OrderService.ScanOrderAsync handles Created -> Prepared.
+                        // But wait, OrderService.ScanOrderAsync handles Pending -> Scanned.
                         // Let's use that if applicable, or just update manually.
                         // The prompt said: "When the scanner inputs the Order ID... automatically change its status to Prepared."
                         // So finding the order implies scanning.

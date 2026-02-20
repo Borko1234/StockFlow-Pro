@@ -1,0 +1,59 @@
+@model StockFlowPro.Models.Order
+
+@{
+    ViewData["Title"] = "Order Details";
+}
+
+<div class="container">
+    <h2>Order #@Model.Id Details</h2>
+    <hr />
+
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Information</h4>
+            <dl class="row">
+                <dt class="col-sm-4">Facility</dt>
+                <dd class="col-sm-8">@Model.Facility?.Name</dd>
+
+                <dt class="col-sm-4">Status</dt>
+                <dd class="col-sm-8">@Model.OrderStatus</dd>
+
+                <dt class="col-sm-4">Date</dt>
+                <dd class="col-sm-8">@Model.CreatedAt</dd>
+                
+                <dt class="col-sm-4">Created By</dt>
+                <dd class="col-sm-8">@Model.OrderProcessing?.CreatedByEmployee?.FullName</dd>
+            </dl>
+        </div>
+        <div class="col-md-6">
+            <h4>Total: @Model.TotalAmount.ToString("C")</h4>
+        </div>
+    </div>
+
+    <h4>Items</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Brand</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.OrderItems)
+            {
+                <tr>
+                    <td>@item.Product.Name</td>
+                    <td>@item.Product.Brand</td>
+                    <td>@item.Quantity</td>
+                    <td>@item.UnitPrice.ToString("C")</td>
+                    <td>@item.TotalPrice.ToString("C")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+</div>

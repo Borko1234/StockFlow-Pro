@@ -23,11 +23,28 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Admin" asp-action="Index">Admin</a>
+                            </li>
+                        }
+                        @if (User.IsInRole("Scanner"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Scanner" asp-action="Index">Scanner</a>
+                            </li>
+                        }
+                        @if (User.IsInRole("OfficeWorker"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Order" asp-action="Index">Orders</a>
+                            </li>
+                        }
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Scanner" asp-action="Index">Scanner</a>
+                            <form class="form-inline" asp-area="" asp-controller="Account" asp-action="Logout" method="post">
+                                <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
+                            </form>
                         </li>
                     </ul>
                 </div>

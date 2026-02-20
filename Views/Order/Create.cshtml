@@ -1,0 +1,61 @@
+@model StockFlowPro.ViewModels.Order.CreateOrderViewModel
+
+@{
+    ViewData["Title"] = "Create Order";
+}
+
+<div class="container mt-4">
+    <h2>Create New Order</h2>
+    <hr />
+
+    <form asp-action="Create" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="mb-3">
+            <label asp-for="FacilityId" class="form-label"></label>
+            <select asp-for="FacilityId" class="form-select" asp-items="Model.Facilities">
+                <option value="">-- Select Facility --</option>
+            </select>
+            <span asp-validation-for="FacilityId" class="text-danger"></span>
+        </div>
+
+        <h4>Order Items</h4>
+        <div id="orderItemsContainer">
+            <!-- Initial Row -->
+            <div class="row mb-2 item-row">
+                <div class="col-md-6">
+                    <select name="OrderItems[0].ProductId" class="form-select" asp-items="Model.Products">
+                        <option value="">-- Select Product --</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <input type="number" name="OrderItems[0].Quantity" class="form-control" placeholder="Quantity" min="1" />
+                </div>
+            </div>
+        </div>
+
+        <button type="button" id="addItemBtn" class="btn btn-secondary mb-3">+ Add Item</button>
+        <br />
+        <button type="submit" class="btn btn-primary btn-lg">Create Order</button>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-link">Cancel</a>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function () {
+            var itemIndex = 1;
+            $('#addItemBtn').click(function () {
+                var newRow = $('.item-row').first().clone();
+                
+                // Update names
+                newRow.find('select').attr('name', 'OrderItems[' + itemIndex + '].ProductId').val('');
+                newRow.find('input').attr('name', 'OrderItems[' + itemIndex + '].Quantity').val('');
+                
+                $('#orderItemsContainer').append(newRow);
+                itemIndex++;
+            });
+        });
+    </script>
+}

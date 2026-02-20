@@ -10,7 +10,7 @@ namespace StockFlowPro.ViewModels
         [Display(Name = "Order ID")]
         public int? OrderId { get; set; }
 
-        public Order CurrentOrder { get; set; }
+        public StockFlowPro.Models.Order CurrentOrder { get; set; }
 
         [Display(Name = "Select Employee")]
         public int? SelectedEmployeeId { get; set; }

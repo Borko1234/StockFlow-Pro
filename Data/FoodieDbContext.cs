@@ -33,9 +33,6 @@ namespace StockFlowPro.Data
             }
 
             // Many-to-Many OrderItems (Order <-> Product)
-            // Actually OrderItem is an explicit join entity with extra data (UnitPrice, Quantity), 
-            // so we configure it as One-to-Many from both sides.
-            
             builder.Entity<OrderItem>()
                 .HasOne(oi => oi.Order)
                 .WithMany(o => o.OrderItems)
@@ -51,6 +48,17 @@ namespace StockFlowPro.Data
                 .HasOne(o => o.OrderProcessing)
                 .WithOne(op => op.Order)
                 .HasForeignKey<OrderProcessing>(op => op.OrderId);
+
+            // Employee to User (One-to-One with Unique Constraint)
+            builder.Entity<Employee>()
+                .HasOne(e => e.User)
+                .WithOne()
+                .HasForeignKey<Employee>(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade); // Cascading delete
+
+            builder.Entity<Employee>()
+                .HasIndex(e => e.UserId)
+                .IsUnique();
         }
     }
 }

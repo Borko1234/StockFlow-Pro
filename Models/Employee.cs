@@ -1,5 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Identity;
 
 namespace StockFlowPro.Models
 {
@@ -12,5 +14,11 @@ namespace StockFlowPro.Models
         public string Phone { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        // Link to Identity User
+        [Required]
+        public string UserId { get; set; }
+        [ForeignKey("UserId")]
+        public IdentityUser User { get; set; }
     }
 }
