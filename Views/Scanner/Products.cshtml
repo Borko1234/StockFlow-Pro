@@ -24,6 +24,7 @@
                         <small class="text-muted">Use the Product ID from the Order Items table.</small>
                     </div>
                     <button type="button" id="scanBtn" class="btn btn-success w-100">Scan</button>
+                    <button type="button" id="markScannedBtn" class="btn btn-primary w-100 mt-2" disabled>Mark Order as Scanned</button>
                     
                     <div id="scanResult" class="mt-3"></div>
                 </div>
@@ -45,22 +46,25 @@
                                 <th>Status</th>
                                 <th>Product ID</th>
                                 <th>Product Name</th>
-                                <th>Quantity</th>
+                                <th>Brand</th>
                                 <th>Unit Price</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var item in Model.CurrentOrder.OrderItems)
                             {
-                                <tr data-product-id="@item.Product.Id" data-product-name="@item.Product.Name">
-                                    <td class="scan-status text-center">
-                                        <span class="badge bg-secondary">Pending</span>
-                                    </td>
-                                    <td>@item.Product.Id</td>
-                                    <td>@item.Product.Name</td>
-                                    <td>@item.Quantity</td>
-                                    <td>@item.UnitPrice.ToString("C")</td>
-                                </tr>
+                                for (var unitIndex = 0; unitIndex < item.Quantity; unitIndex++)
+                                {
+                                    <tr data-product-id="@item.Product.Id" data-product-name="@item.Product.Name" data-scanned="false">
+                                        <td class="scan-status text-center">
+                                            <span class="badge bg-secondary">Pending</span>
+                                        </td>
+                                        <td>@item.Product.Id</td>
+                                        <td>@item.Product.Name</td>
+                                        <td>@item.Product.Brand</td>
+                                        <td>@item.UnitPrice.ToString("C")</td>
+                                    </tr>
+                                }
                             }
                         </tbody>
                     </table>
@@ -87,8 +91,6 @@
                 }
             });
 
-            var orderCompleted = false;
-
             function scanProduct() {
                 var barcode = $('#barcodeInput').val().trim();
                 var orderId = @Model.CurrentOrder.Id;
@@ -109,19 +111,21 @@
                         $('#scanResult').html('<div class="alert alert-success">Scanned: ' + data.displayName + '</div>');
                         
                         var row = $('#productsTable tbody tr').filter(function() {
-                            return $(this).data('product-id') == data.productId;
+                            return $(this).data('product-id') == data.productId && $(this).data('scanned') === false;
                         });
 
                         if (row.length > 0) {
-                            row.find('.scan-status').html('<span class="badge bg-success">Scanned</span>');
-                            row.addClass('table-success');
+                            var targetRow = row.first();
+                            targetRow.find('.scan-status').html('<span class="badge bg-success">Scanned</span>');
+                            targetRow.addClass('table-success');
+                            targetRow.data('scanned', true);
+                            targetRow.attr('data-scanned', 'true');
+                            updateMarkScannedButton();
+                        } else {
+                            $('#scanResult').html('<div class="alert alert-warning">All units for this product are already scanned.</div>');
                         }
 
                         $('#barcodeInput').val('').focus();
-
-                        if (!orderCompleted && isAllScanned()) {
-                            completeOrderScan(orderId);
-                        }
                     } else {
                         $('#scanResult').html('<div class="alert alert-danger">' + data.message + '</div>');
                         $('#barcodeInput').val('').focus();
@@ -137,14 +141,33 @@
                 });
             }
 
-            function completeOrderScan(orderId) {
+            function updateMarkScannedButton() {
+                var canComplete = isAllScanned();
+                $('#markScannedBtn').prop('disabled', !canComplete);
+            }
+
+            $('#markScannedBtn').on('click', function () {
+                var orderId = @Model.CurrentOrder.Id;
+                if (!isAllScanned()) {
+                    return;
+                }
+
+                var confirmed = confirm('Confirm marking this order as Scanned?');
+                if (!confirmed) {
+                    return;
+                }
+
                 $.post('@Url.Action("CompleteScan", "Scanner")', { orderId: orderId }, function (data) {
                     if (data && data.success) {
-                        orderCompleted = true;
-                        $('#scanResult').html('<div class="alert alert-success">All items scanned. Order marked as Scanned.</div>');
+                        alert('Order marked as Scanned.');
+                        window.location.href = '@Url.Action("Index", "Scanner")';
+                    } else {
+                        $('#scanResult').html('<div class="alert alert-danger">' + (data && data.message ? data.message : 'Unable to update order status.') + '</div>');
                     }
                 });
-            }
+            });
+
+            updateMarkScannedButton();
 
             // Filter
             $('#filterInput').on('keyup', function() {

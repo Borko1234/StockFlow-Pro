@@ -98,6 +98,17 @@
              <a asp-controller="AdminEmployees" asp-action="Index" class="btn btn-secondary btn-block">Manage Employees</a>
          </div>
     </div>
+
+    <!--
+    </!-></><div class="row mt-3">
+        <div class="col-md-12">
+            <form asp-action="AddStockToAll" method="post" onsubmit="return confirm('Add 100 to QuantityInStock for all products?');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-warning btn-block w-100">Add 100 Stock to All Products</button>
+            </form>
+        </div>
+    </div>
+    -->
 </div>
 
 @section Scripts {

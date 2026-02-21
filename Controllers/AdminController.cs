@@ -92,5 +92,19 @@ namespace StockFlowPro.Controllers
 
             return View(model);
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddStockToAll()
+        {
+            var products = await _context.Products.ToListAsync();
+            foreach (var product in products)
+            {
+                product.QuantityInStock += 100;
+            }
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
     }
 }
