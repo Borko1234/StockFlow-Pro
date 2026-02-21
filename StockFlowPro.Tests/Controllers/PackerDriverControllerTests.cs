@@ -42,5 +42,17 @@ namespace StockFlowPro.Tests.Controllers
             Assert.Equal("~/Views/Packer/Index.cshtml", view.ViewName);
             Assert.NotNull(view.Model);
         }
+
+        [Fact]
+        public async Task Packer_MarkPacked_Redirects_Index()
+        {
+            using var ctx = TestDbContextFactory.CreateContext();
+            ctx.Orders.Add(new Order { Id = 99, FacilityId = 1, OrderStatus = OrderStatus.Scanned });
+            await ctx.SaveChangesAsync();
+            var controller = new PackerController(ctx);
+            var result = await controller.MarkPacked(99);
+            var redirect = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("Index", redirect.ActionName);
+        }
     }
 }

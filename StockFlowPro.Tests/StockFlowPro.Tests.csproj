@@ -8,6 +8,7 @@
     <CollectCoverage>true</CollectCoverage>
     <CoverletOutputFormat>cobertura</CoverletOutputFormat>
     <ExcludeByFile>**/Migrations/*.cs;**/Program.cs;**/Views/**/*.cs;**/*.g.cs;**/wwwroot/**</ExcludeByFile>
+    <Include>[StockFlowPro]StockFlowPro.Services.*,[StockFlowPro]StockFlowPro.Controllers.*</Include>
   </PropertyGroup>
 
   <ItemGroup>

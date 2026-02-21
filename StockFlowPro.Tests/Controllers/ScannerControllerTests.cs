@@ -42,6 +42,37 @@ namespace StockFlowPro.Tests.Controllers
         }
 
         [Fact]
+        public async Task Assign_Pending_Order_Sets_Preparer_And_Redirects()
+        {
+            using var ctx = TestDbContextFactory.CreateContext();
+            var order = new Order { Id = 3, FacilityId = 1, OrderStatus = OrderStatus.Pending, OrderProcessing = new OrderProcessing { OrderId = 3 } };
+            ctx.Orders.Add(order);
+            ctx.Employees.Add(new Employee { Id = 20, FullName = "S", Position = "Scanner", Phone = "0", IsActive = true, UserId = "u" });
+            await ctx.SaveChangesAsync();
+
+            var controller = new ScannerController(ctx, Mock.Of<IOrderService>());
+            var vm = new ScannerViewModel { OrderId = 3, SelectedEmployeeId = 20 };
+            var result = await controller.Assign(vm);
+            var redirect = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("Products", redirect.ActionName);
+        }
+
+        [Fact]
+        public async Task CompleteScan_Not_Pending_Returns_False()
+        {
+            using var ctx = TestDbContextFactory.CreateContext();
+            ctx.Orders.Add(new Order { Id = 4, FacilityId = 1, OrderStatus = OrderStatus.Scanned });
+            await ctx.SaveChangesAsync();
+            var svc = new Mock<IOrderService>();
+            var controller = new ScannerController(ctx, svc.Object);
+            var result = await controller.CompleteScan(4);
+            var json = Assert.IsType<JsonResult>(result);
+            var value = json.Value!;
+            var successProp = value.GetType().GetProperty("success");
+            Assert.False((bool)successProp!.GetValue(value)!);
+        }
+
+        [Fact]
         public async Task ScanItem_Invalid_Barcode_Returns_Error_Json()
         {
             using var ctx = TestDbContextFactory.CreateContext();

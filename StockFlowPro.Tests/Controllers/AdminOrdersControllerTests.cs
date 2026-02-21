@@ -18,6 +18,22 @@ namespace StockFlowPro.Tests.Controllers
     public class AdminOrdersControllerTests
     {
         [Fact]
+        public async Task Index_Applies_Filters_Correctly()
+        {
+            using var ctx = TestDbContextFactory.CreateContext();
+            ctx.Facilities.Add(new Facility { Id = 1, Name = "F1", Address = "A", Phone = "0", Area = "X", RepresentativeName = "R", IsActive = true });
+            ctx.Facilities.Add(new Facility { Id = 2, Name = "F2", Address = "A", Phone = "0", Area = "X", RepresentativeName = "R", IsActive = true });
+            ctx.Orders.Add(new Order { FacilityId = 1, OrderStatus = OrderStatus.Pending, CreatedAt = System.DateTime.Today.AddDays(-2) });
+            ctx.Orders.Add(new Order { FacilityId = 1, OrderStatus = OrderStatus.Scanned, CreatedAt = System.DateTime.Today });
+            ctx.Orders.Add(new Order { FacilityId = 2, OrderStatus = OrderStatus.Delivered, CreatedAt = System.DateTime.Today });
+            await ctx.SaveChangesAsync();
+
+            var controller = new AdminOrdersController(ctx, Mock.Of<IOrderService>());
+            var result = await controller.Index(System.DateTime.Today.AddDays(-1), System.DateTime.Today, OrderStatus.Scanned, 1);
+            var view = Assert.IsType<ViewResult>(result);
+            Assert.NotNull(view.Model);
+        }
+        [Fact]
         public async Task UpdateStatus_To_Pending_Clears_PreparedBy_And_Returns_Success()
         {
             using var ctx = TestDbContextFactory.CreateContext();

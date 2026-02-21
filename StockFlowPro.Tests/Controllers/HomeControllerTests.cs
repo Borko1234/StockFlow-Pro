@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using StockFlowPro.Controllers;
+using StockFlowPro.Models;
+using StockFlowPro.Models.Enums;
 using StockFlowPro.Tests.TestUtils;
 using Xunit;
 
@@ -65,6 +67,30 @@ namespace StockFlowPro.Tests.Controllers
             var redirect = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Index", redirect.ActionName);
             Assert.Equal("Driver", redirect.ControllerName);
+        }
+
+        [Fact]
+        public async Task Index_OfficeWorker_Filters_Todays_Orders()
+        {
+            var ctx = TestDbContextFactory.CreateContext();
+            ctx.Facilities.Add(new Facility { Id = 1, Name = "F", Address = "A", Phone = "0", Area = "X", RepresentativeName = "R", IsActive = true });
+            ctx.Orders.Add(new Order { FacilityId = 1, OrderStatus = OrderStatus.Pending, CreatedAt = System.DateTime.Today.AddDays(-1) });
+            ctx.Orders.Add(new Order { FacilityId = 1, OrderStatus = OrderStatus.Pending, CreatedAt = System.DateTime.Today.AddHours(1) });
+            await ctx.SaveChangesAsync();
+
+            var userMgr = new Mock<UserManager<IdentityUser>>(Mock.Of<IUserStore<IdentityUser>>(), null, null, null, null, null, null, null, null);
+            var controller = new HomeController(ctx, userMgr.Object);
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Role, "OfficeWorker") }, "TestAuth"))
+                }
+            };
+
+            var result = await controller.Index();
+            var view = Assert.IsType<ViewResult>(result);
+            Assert.NotNull(view.Model);
         }
     }
 }

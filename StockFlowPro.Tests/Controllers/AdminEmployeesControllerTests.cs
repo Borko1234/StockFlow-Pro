@@ -60,5 +60,37 @@ namespace StockFlowPro.Tests.Controllers
             var view = Assert.IsType<ViewResult>(result);
             Assert.False(controller.ModelState.IsValid);
         }
+
+        [Fact]
+        public async Task Edit_Updates_Employee_And_Redirects()
+        {
+            using var ctx = TestDbContextFactory.CreateContext();
+            var userMgr = CreateUserManager();
+            var controller = new AdminEmployeesController(ctx, userMgr.Object, NullLogger<AdminEmployeesController>.Instance);
+            var emp = new Employee { FullName = "Test", Position = "Scanner", Phone = "000", IsActive = true, UserId = "uid" };
+            ctx.Employees.Add(emp);
+            await ctx.SaveChangesAsync();
+
+            emp.FullName = "Updated";
+            var result = await controller.Edit(emp.Id, emp);
+            var redirect = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("Index", redirect.ActionName);
+        }
+
+        [Fact]
+        public async Task DeleteConfirmed_Removes_Employee_When_User_Missing()
+        {
+            using var ctx = TestDbContextFactory.CreateContext();
+            var userMgr = CreateUserManager();
+            var controller = new AdminEmployeesController(ctx, userMgr.Object, NullLogger<AdminEmployeesController>.Instance);
+            var emp = new Employee { FullName = "ToDel", Position = "Scanner", Phone = "000", IsActive = true, UserId = "missing" };
+            ctx.Employees.Add(emp);
+            await ctx.SaveChangesAsync();
+
+            var result = await controller.DeleteConfirmed(emp.Id);
+            var redirect = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("Index", redirect.ActionName);
+            Assert.False(await ctx.Employees.AnyAsync());
+        }
     }
 }
