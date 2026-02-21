@@ -2,6 +2,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using StockFlowPro.Models;
 using StockFlowPro.Controllers;
 using StockFlowPro.Data;
 using StockFlowPro.Models;
@@ -35,6 +36,25 @@ namespace StockFlowPro.Tests.Controllers
 
             var view = Assert.IsType<ViewResult>(result);
             Assert.NotNull(view.Model);
+        }
+
+        [Fact]
+        public async Task AddStockToAll_Increments_All_Products_By_100()
+        {
+            using var ctx = TestDbContextFactory.CreateContext();
+            var p1 = Builders.BuildProduct(1, price: 10m, qty: 5);
+            var p2 = Builders.BuildProduct(2, price: 5m, qty: 0);
+            ctx.Products.AddRange(p1, p2);
+            await ctx.SaveChangesAsync();
+
+            var controller = new AdminController(ctx);
+            var result = await controller.AddStockToAll();
+            var redirect = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("Index", redirect.ActionName);
+
+            var reloaded = await ctx.Products.OrderBy(p => p.Id).ToListAsync();
+            Assert.Equal(105, reloaded[0].QuantityInStock);
+            Assert.Equal(100, reloaded[1].QuantityInStock);
         }
     }
 }

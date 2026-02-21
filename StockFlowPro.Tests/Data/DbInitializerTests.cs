@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,10 @@ namespace StockFlowPro.Tests.Data
         public async Task Initialize_Creates_Roles_And_Admin_User()
         {
             var services = new ServiceCollection();
-            services.AddDbContext<StockFlowPro.Data.StockFlowDbContext>(o => { o.UseApplicationServiceProvider(services.BuildServiceProvider()); });
+            var options = new DbContextOptionsBuilder<StockFlowDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .Options;
+            services.AddSingleton(options);
 
             var roleManager = new Mock<RoleManager<IdentityRole>>(
                 Mock.Of<IRoleStore<IdentityRole>>(), null, null, null, null);

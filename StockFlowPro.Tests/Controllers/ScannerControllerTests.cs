@@ -17,6 +17,63 @@ namespace StockFlowPro.Tests.Controllers
     public class ScannerControllerTests
     {
         [Fact]
+        public async Task Index_With_Invalid_Order_Shows_Error()
+        {
+            using var ctx = TestDbContextFactory.CreateContext();
+            var orderService = new Mock<IOrderService>(MockBehavior.Strict);
+            var controller = new ScannerController(ctx, orderService.Object);
+            var result = await controller.Index(999);
+            var view = Assert.IsType<ViewResult>(result);
+            var model = Assert.IsType<ScannerViewModel>(view.Model);
+            Assert.Contains("Order not found", model.ErrorMessage ?? "");
+        }
+
+        [Fact]
+        public async Task Products_Returns_View_With_Model()
+        {
+            using var ctx = TestDbContextFactory.CreateContext();
+            var order = new Order { Id = 2, FacilityId = 1 };
+            ctx.Orders.Add(order);
+            await ctx.SaveChangesAsync();
+            var controller = new ScannerController(ctx, Mock.Of<IOrderService>());
+            var result = await controller.Products(2, null);
+            var view = Assert.IsType<ViewResult>(result);
+            Assert.NotNull(view.Model);
+        }
+
+        [Fact]
+        public async Task ScanItem_Invalid_Barcode_Returns_Error_Json()
+        {
+            using var ctx = TestDbContextFactory.CreateContext();
+            var controller = new ScannerController(ctx, Mock.Of<IOrderService>());
+            var result = await controller.ScanItem(1, "abc");
+            var json = Assert.IsType<JsonResult>(result);
+            var value = json.Value!;
+            var prop = value.GetType().GetProperty("success");
+            Assert.NotNull(prop);
+            Assert.False((bool)prop!.GetValue(value)!);
+        }
+
+        [Fact]
+        public async Task ScanItem_Found_Returns_Product_Info()
+        {
+            using var ctx = TestDbContextFactory.CreateContext();
+            var order = new Order { Id = 1, FacilityId = 1 };
+            var product = Builders.BuildProduct(7, name: "P7");
+            ctx.Orders.Add(order);
+            ctx.Products.Add(product);
+            ctx.OrderItems.Add(new OrderItem { OrderId = order.Id, ProductId = product.Id, Quantity = 2, UnitPrice = 1, TotalPrice = 2 });
+            await ctx.SaveChangesAsync();
+
+            var controller = new ScannerController(ctx, Mock.Of<IOrderService>());
+            var result = await controller.ScanItem(order.Id, product.Id.ToString());
+            var json = Assert.IsType<JsonResult>(result);
+            var value = json.Value!;
+            var successProp = value.GetType().GetProperty("success");
+            Assert.True((bool)successProp!.GetValue(value)!);
+        }
+
+        [Fact]
         public async Task Assign_NonPending_Order_Shows_Error_In_View()
         {
             using var ctx = TestDbContextFactory.CreateContext();
@@ -52,8 +109,10 @@ namespace StockFlowPro.Tests.Controllers
             var result = await controller.CompleteScan(1);
 
             var json = Assert.IsType<JsonResult>(result);
-            var dict = Assert.IsType<Dictionary<string, object>>(json.Value!);
-            Assert.True((bool)dict["success"]);
+            var value = json.Value!;
+            var prop = value.GetType().GetProperty("success");
+            Assert.NotNull(prop);
+            Assert.True((bool)prop!.GetValue(value)!);
         }
     }
 }

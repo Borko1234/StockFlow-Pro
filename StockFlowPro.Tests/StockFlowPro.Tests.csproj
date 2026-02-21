@@ -5,6 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <CollectCoverage>true</CollectCoverage>
+    <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+    <ExcludeByFile>**/Migrations/*.cs;**/Program.cs;**/Views/**/*.cs;**/*.g.cs;**/wwwroot/**</ExcludeByFile>
   </PropertyGroup>
 
   <ItemGroup>
