@@ -19,8 +19,9 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label for="barcodeInput" class="form-label">Barcode / Product ID</label>
-                        <input type="text" class="form-control" id="barcodeInput" autofocus placeholder="Scan barcode...">
+                        <label for="barcodeInput" class="form-label">Product ID</label>
+                        <input type="text" class="form-control" id="barcodeInput" autofocus placeholder="Scan or enter product ID">
+                        <small class="text-muted">Use the Product ID from the Order Items table.</small>
                     </div>
                     <button type="button" id="scanBtn" class="btn btn-success w-100">Scan</button>
                     
@@ -42,6 +43,7 @@
                         <thead>
                             <tr>
                                 <th>Status</th>
+                                <th>Product ID</th>
                                 <th>Product Name</th>
                                 <th>Quantity</th>
                                 <th>Unit Price</th>
@@ -54,6 +56,7 @@
                                     <td class="scan-status text-center">
                                         <span class="badge bg-secondary">Pending</span>
                                     </td>
+                                    <td>@item.Product.Id</td>
                                     <td>@item.Product.Name</td>
                                     <td>@item.Quantity</td>
                                     <td>@item.UnitPrice.ToString("C")</td>
@@ -84,20 +87,29 @@
                 }
             });
 
+            var orderCompleted = false;
+
             function scanProduct() {
-                var barcode = $('#barcodeInput').val();
+                var barcode = $('#barcodeInput').val().trim();
                 var orderId = @Model.CurrentOrder.Id;
 
-                if (!barcode) return;
+                if (!barcode) {
+                    $('#scanResult').html('<div class="alert alert-danger">Enter a product ID.</div>');
+                    return;
+                }
+
+                if (!/^\d+$/.test(barcode)) {
+                    $('#scanResult').html('<div class="alert alert-danger">Product ID must be numeric.</div>');
+                    $('#barcodeInput').val('').focus();
+                    return;
+                }
 
                 $.post('@Url.Action("ScanItem", "Scanner")', { orderId: orderId, barcode: barcode }, function (data) {
                     if (data.success) {
-                        $('#scanResult').html('<div class="alert alert-success">Scanned: ' + data.productName + '</div>');
+                        $('#scanResult').html('<div class="alert alert-success">Scanned: ' + data.displayName + '</div>');
                         
-                        // Update UI
-                        // Find row by product name or ID logic (simple name match for now)
                         var row = $('#productsTable tbody tr').filter(function() {
-                            return $(this).data('product-name') == data.productName || $(this).data('product-id') == barcode;
+                            return $(this).data('product-id') == data.productId;
                         });
 
                         if (row.length > 0) {
@@ -106,9 +118,30 @@
                         }
 
                         $('#barcodeInput').val('').focus();
+
+                        if (!orderCompleted && isAllScanned()) {
+                            completeOrderScan(orderId);
+                        }
                     } else {
                         $('#scanResult').html('<div class="alert alert-danger">' + data.message + '</div>');
                         $('#barcodeInput').val('').focus();
+                    }
+                });
+            }
+
+            function isAllScanned() {
+                var rows = $('#productsTable tbody tr');
+                if (!rows.length) return false;
+                return rows.toArray().every(function (row) {
+                    return $(row).find('.scan-status .badge').hasClass('bg-success');
+                });
+            }
+
+            function completeOrderScan(orderId) {
+                $.post('@Url.Action("CompleteScan", "Scanner")', { orderId: orderId }, function (data) {
+                    if (data && data.success) {
+                        orderCompleted = true;
+                        $('#scanResult').html('<div class="alert alert-success">All items scanned. Order marked as Scanned.</div>');
                     }
                 });
             }

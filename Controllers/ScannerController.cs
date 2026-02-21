@@ -45,10 +45,13 @@ namespace StockFlowPro.Controllers
                 {
                     model.ErrorMessage = "Order not found.";
                 }
+                else if (order.OrderStatus != OrderStatus.Pending)
+                {
+                    model.ErrorMessage = "Only Pending orders can be scanned.";
+                }
                 else
                 {
                     model.CurrentOrder = order;
-                    // Pre-select employee if already assigned
                     if (order.OrderProcessing?.PreparedByEmployeeId.HasValue == true)
                     {
                         model.SelectedEmployeeId = order.OrderProcessing.PreparedByEmployeeId;
@@ -71,30 +74,22 @@ namespace StockFlowPro.Controllers
 
                 if (order != null)
                 {
+                    if (order.OrderStatus != OrderStatus.Pending)
+                    {
+                        model.ErrorMessage = "Only Pending orders can be scanned.";
+                        model.Employees = await _context.Employees.Where(e => e.IsActive).ToListAsync();
+                        return View("Index", model);
+                    }
+
                     if (order.OrderProcessing == null)
                     {
                         order.OrderProcessing = new OrderProcessing { OrderId = order.Id };
                         _context.OrderProcessings.Add(order.OrderProcessing);
                     }
 
-                    // Assign Employee
                     order.OrderProcessing.PreparedByEmployeeId = model.SelectedEmployeeId.Value;
                     
-                    // Update Status if Pending -> Scanned
-                    if (order.OrderStatus == OrderStatus.Pending)
-                    {
-                        // Using Service to handle status transition logic (stock check etc)
-                        // But wait, OrderService.ScanOrderAsync handles Pending -> Scanned.
-                        // Let's use that if applicable, or just update manually.
-                        // The prompt said: "When the scanner inputs the Order ID... automatically change its status to Prepared."
-                        // So finding the order implies scanning.
-                        
-                        await _orderService.ScanOrderAsync(order.Id);
-                    }
-                    else
-                    {
-                         await _context.SaveChangesAsync();
-                    }
+                    await _context.SaveChangesAsync();
 
                     return RedirectToAction("Products", new { orderId = order.Id });
                 }
@@ -132,18 +127,48 @@ namespace StockFlowPro.Controllers
         [HttpPost]
         public async Task<IActionResult> ScanItem(int orderId, string barcode)
         {
-             // This action can be called via AJAX to verify a product
-             var item = await _context.OrderItems
-                 .Include(oi => oi.Product)
-                 .Where(oi => oi.OrderId == orderId && (oi.Product.Id.ToString() == barcode || oi.Product.Name == barcode)) // Assuming barcode matches ID or Name for now as Product has no Barcode field
-                 .FirstOrDefaultAsync();
+            if (!int.TryParse(barcode, out var productId))
+            {
+                return Json(new { success = false, message = "Enter a valid numeric product ID." });
+            }
 
-             if (item != null)
-             {
-                 return Json(new { success = true, productName = item.Product.Name, quantity = item.Quantity });
-             }
+            var item = await _context.OrderItems
+                .Include(oi => oi.Product)
+                .Where(oi => oi.OrderId == orderId && oi.Product.Id == productId)
+                .FirstOrDefaultAsync();
 
-             return Json(new { success = false, message = "Product not found in this order." });
+            if (item != null)
+            {
+                return Json(new
+                {
+                    success = true,
+                    productId = item.Product.Id,
+                    productName = item.Product.Name,
+                    displayName = $"{item.Product.Name} ({item.Product.Id})",
+                    quantity = item.Quantity
+                });
+            }
+
+            return Json(new { success = false, message = "Product ID not found in this order." });
+        }
+
+        // POST: Scanner/CompleteScan
+        [HttpPost]
+        public async Task<IActionResult> CompleteScan(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            if (order == null)
+            {
+                return Json(new { success = false, message = "Order not found." });
+            }
+
+            if (order.OrderStatus != OrderStatus.Pending)
+            {
+                return Json(new { success = false, message = "Order is not in Pending status." });
+            }
+
+            var updated = await _orderService.UpdateOrderStatusAsync(orderId, OrderStatus.Scanned);
+            return Json(new { success = updated });
         }
     }
 }

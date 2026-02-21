@@ -84,7 +84,7 @@ namespace StockFlowPro.Models
             var list = new List<Employee>();
             for (int i = 0; i < 20; i++)
             {
-                var email = $"emp{i}@foodie.com";
+                var email = $"emp{i}@stockflow.com";
                 var user = await userManager.FindByEmailAsync(email);
                 if (user == null)
                 {

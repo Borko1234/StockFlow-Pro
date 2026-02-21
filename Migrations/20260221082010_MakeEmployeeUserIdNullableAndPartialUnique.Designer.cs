@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StockFlowPro.Data;
 
@@ -10,9 +11,11 @@ using StockFlowPro.Data;
 namespace StockFlowPro.Migrations
 {
     [DbContext(typeof(FoodieDbContext))]
-    partial class FoodieDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260221082010_MakeEmployeeUserIdNullableAndPartialUnique")]
+    partial class MakeEmployeeUserIdNullableAndPartialUnique
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -371,39 +374,6 @@ namespace StockFlowPro.Migrations
                     b.ToTable("OrderProcessings");
                 });
 
-            modelBuilder.Entity("StockFlowPro.Models.OrderStatusAuditLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("AdminUserId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AdminUserName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("ChangedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("NewStatus")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("OldStatus")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("OrderId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrderId");
-
-                    b.ToTable("OrderStatusAuditLogs");
-                });
-
             modelBuilder.Entity("StockFlowPro.Models.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -556,17 +526,6 @@ namespace StockFlowPro.Migrations
                     b.Navigation("PreparedByEmployee");
 
                     b.Navigation("ScannedByEmployee");
-                });
-
-            modelBuilder.Entity("StockFlowPro.Models.OrderStatusAuditLog", b =>
-                {
-                    b.HasOne("StockFlowPro.Models.Order", "Order")
-                        .WithMany()
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("StockFlowPro.Models.Facility", b =>

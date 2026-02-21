@@ -12,5 +12,5 @@ This solution contains two applications:
 - In the project root (`D:\StockFlow-Pro\StockFlow-Pro`), run: `dotnet run`
 - Open: http://localhost:5243/
 - Database: SQLite file `app.db` is created automatically
-- Admin login (seeded): `admin@foodie.com` / `Admin123!`
+- Admin login (seeded): `admin@stockflow.com` / `Admin123!`
 - Alternate self-host ports: http://localhost:5000 and https://localhost:5001

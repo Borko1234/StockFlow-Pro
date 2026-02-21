@@ -17,6 +17,7 @@ namespace StockFlowPro.Data
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<OrderProcessing> OrderProcessings { get; set; }
+        public DbSet<OrderStatusAuditLog> OrderStatusAuditLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -55,10 +56,6 @@ namespace StockFlowPro.Data
                 .WithOne()
                 .HasForeignKey<Employee>(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade); // Cascading delete
-
-            builder.Entity<Employee>()
-                .HasIndex(e => e.UserId)
-                .IsUnique();
         }
     }
 }

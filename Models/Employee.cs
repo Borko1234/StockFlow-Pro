@@ -16,8 +16,7 @@ namespace StockFlowPro.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         // Link to Identity User
-        [Required]
-        public string UserId { get; set; }
+        public string? UserId { get; set; }
         [ForeignKey("UserId")]
         public IdentityUser User { get; set; }
     }

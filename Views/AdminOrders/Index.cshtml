@@ -1,11 +1,15 @@
 @model StockFlowPro.ViewModels.Admin.AdminOrderListViewModel
+@using StockFlowPro.Models.Enums
 
 @{
     ViewData["Title"] = "Manage Orders";
 }
 
 <div class="container-fluid">
-    <h1 class="h3 mb-2 text-gray-800">Order Management</h1>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h1 class="h3 text-gray-800">Order Management</h1>
+        <a asp-controller="Admin" asp-action="Index" class="btn btn-secondary btn-sm">Back to Admin</a>
+    </div>
 
     <!-- Filters -->
     <div class="card shadow mb-4">
@@ -17,22 +21,26 @@
                 <div class="col-md-3">
                     <label>Start Date</label>
                     <input type="date" name="startDate" class="form-control" value="@Model.StartDate?.ToString("yyyy-MM-dd")" />
+                    <small class="text-muted">For example: 2026-02-01</small>
                 </div>
                 <div class="col-md-3">
                     <label>End Date</label>
                     <input type="date" name="endDate" class="form-control" value="@Model.EndDate?.ToString("yyyy-MM-dd")" />
+                    <small class="text-muted">For example: 2026-02-15</small>
                 </div>
                 <div class="col-md-3">
                     <label>Status</label>
                     <select name="status" class="form-control" asp-items="ViewBag.Statuses">
                         <option value="">All Statuses</option>
                     </select>
+                    <small class="text-muted">For example: Pending</small>
                 </div>
                 <div class="col-md-3">
                     <label>Facility</label>
                     <select name="facilityId" class="form-control" asp-items="ViewBag.Facilities">
                         <option value="">All Facilities</option>
                     </select>
+                    <small class="text-muted">For example: Sofia DC Druzhba</small>
                 </div>
                 <div class="col-12 mt-3">
                     <button type="submit" class="btn btn-primary">Filter</button>
@@ -41,6 +49,8 @@
             </form>
         </div>
     </div>
+
+    @Html.AntiForgeryToken()
 
     <!-- Orders Table -->
     <div class="card shadow mb-4">
@@ -61,24 +71,38 @@
                     <tbody>
                         @foreach (var order in Model.Orders)
                         {
-                            <tr>
+                            <tr data-status="@order.OrderStatus" data-created="@order.CreatedAt.Ticks">
                                 <td>@order.Id</td>
                                 <td>@order.CreatedAt.ToShortDateString()</td>
                                 <td>@order.Facility?.Name</td>
                                 <td>@order.TotalAmount.ToString("C")</td>
                                 <td>
-                                    <span class="badge @(order.OrderStatus == StockFlowPro.Models.Enums.OrderStatus.Delivered ? "bg-success" : 
-                                                       order.OrderStatus == StockFlowPro.Models.Enums.OrderStatus.Scanned ? "bg-info" : 
-                                                       "bg-secondary")">
-                                        @order.OrderStatus
-                                    </span>
+                                    <div class="d-flex flex-column gap-1">
+                                        <span class="badge status-badge @(GetStatusBadgeClass(order.OrderStatus))" data-order-id="@order.Id">
+                                            @order.OrderStatus
+                                        </span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <select class="form-select form-select-sm status-select" data-order-id="@order.Id" data-current="@order.OrderStatus">
+                                                @foreach (var status in GetDisplayStatuses())
+                                                {
+                                                    var isSelected = status == order.OrderStatus;
+                                                    <option value="@status" selected="@(isSelected ? "selected" : null)">
+                                                        @status
+                                                    </option>
+                                                }
+                                            </select>
+                                            <span class="spinner-border spinner-border-sm text-primary d-none" role="status" data-order-id="@order.Id"></span>
+                                        </div>
+                                        <div class="text-success small d-none" data-order-id="@order.Id"></div>
+                                        <div class="text-danger small d-none" data-order-id="@order.Id"></div>
+                                    </div>
                                 </td>
-                                <td>@order.OrderProcessing?.PreparedByEmployee?.FullName</td>
+                                <td class="prepared-by">@order.OrderProcessing?.PreparedByEmployee?.FullName</td>
                                 <td>
                                     <a asp-action="Details" asp-route-id="@order.Id" class="btn btn-info btn-sm">Details</a>
                                     @if (order.OrderStatus == StockFlowPro.Models.Enums.OrderStatus.Scanned)
                                     {
-                                        <form asp-action="MarkDelivered" asp-route-id="@order.Id" method="post" class="d-inline" onsubmit="return confirm('Mark as Delivered?');">
+                                        <form asp-action="MarkDelivered" asp-route-id="@order.Id" method="post" class="d-inline deliver-form" onsubmit="return confirm('Mark as Delivered?');">
                                             <button type="submit" class="btn btn-success btn-sm">Deliver</button>
                                         </form>
                                     }
@@ -91,3 +115,166 @@
         </div>
     </div>
 </div>
+
+@functions {
+    private static OrderStatus[] GetDisplayStatuses()
+    {
+        return new[]
+        {
+            OrderStatus.Scanned,
+            OrderStatus.Pending,
+            OrderStatus.Delivered,
+            OrderStatus.Cancelled
+        };
+    }
+
+    private static string GetStatusBadgeClass(OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.Delivered => "bg-success",
+            OrderStatus.Scanned => "bg-info",
+            OrderStatus.Cancelled => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private static int GetWorkflowIndex(OrderStatus status)
+    {
+        return status switch
+        {
+            OrderStatus.Pending => 0,
+            OrderStatus.Scanned => 1,
+            OrderStatus.Delivered => 2,
+            OrderStatus.Cancelled => 3,
+            _ => int.MaxValue
+        };
+    }
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            function setRowMessage(orderId, type, message) {
+                var successEl = $('div.text-success[data-order-id="' + orderId + '"]');
+                var errorEl = $('div.text-danger[data-order-id="' + orderId + '"]');
+                successEl.addClass('d-none').text('');
+                errorEl.addClass('d-none').text('');
+                if (type === 'success') {
+                    successEl.text(message).removeClass('d-none');
+                } else if (type === 'error') {
+                    errorEl.text(message).removeClass('d-none');
+                }
+            }
+
+            function updateBadge(orderId, status) {
+                var badge = $('.status-badge[data-order-id="' + orderId + '"]');
+                badge.text(status);
+                badge.removeClass('bg-success bg-primary bg-info bg-warning bg-danger bg-secondary text-dark');
+                if (status === 'Delivered') {
+                    badge.addClass('bg-success');
+                } else if (status === 'Scanned') {
+                    badge.addClass('bg-info');
+                } else if (status === 'Cancelled') {
+                    badge.addClass('bg-danger');
+                } else {
+                    badge.addClass('bg-secondary');
+                }
+            }
+
+            function getStatusIndex(status) {
+                if (status === 'Scanned') {
+                    return 0;
+                }
+                if (status === 'Pending') {
+                    return 1;
+                }
+                if (status === 'Delivered') {
+                    return 2;
+                }
+                if (status === 'Cancelled') {
+                    return 3;
+                }
+                return 99;
+            }
+
+            function sortRows() {
+                var tbody = $('table tbody');
+                var rows = tbody.find('tr').get();
+                rows.sort(function (a, b) {
+                    var aStatus = $(a).data('status');
+                    var bStatus = $(b).data('status');
+                    var statusDiff = getStatusIndex(aStatus) - getStatusIndex(bStatus);
+                    if (statusDiff !== 0) {
+                        return statusDiff;
+                    }
+                    var aCreated = parseInt($(a).data('created'), 10);
+                    var bCreated = parseInt($(b).data('created'), 10);
+                    return bCreated - aCreated;
+                });
+                $.each(rows, function (_, row) {
+                    tbody.append(row);
+                });
+            }
+
+            $('.status-select').on('change', function () {
+                var select = $(this);
+                var orderId = select.data('order-id');
+                var newStatus = select.val();
+                var previousStatus = select.data('current');
+
+                if (newStatus === previousStatus) {
+                    return;
+                }
+
+                var confirmed = confirm('Confirm changing status to ' + newStatus + '?');
+                if (!confirmed) {
+                    select.val(previousStatus);
+                    return;
+                }
+
+                var spinner = $('.spinner-border[data-order-id="' + orderId + '"]');
+                spinner.removeClass('d-none');
+                select.prop('disabled', true);
+                setRowMessage(orderId, null, '');
+
+                $.ajax({
+                    url: '@Url.Action("UpdateStatus", "AdminOrders")',
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token },
+                    data: { id: orderId, newStatus: newStatus },
+                    success: function (response) {
+                        spinner.addClass('d-none');
+                        select.prop('disabled', false);
+
+                        if (response && response.success) {
+                            select.data('current', newStatus);
+                            updateBadge(orderId, response.status);
+                            var row = select.closest('tr');
+                            row.attr('data-status', response.status);
+                            if (previousStatus === 'Scanned') {
+                                row.find('.deliver-form').remove();
+                            }
+                            if (response.status === 'Pending') {
+                                row.find('.prepared-by').text('');
+                            }
+                            sortRows();
+                            setRowMessage(orderId, 'success', 'Status updated.');
+                        } else {
+                            select.val(previousStatus);
+                            setRowMessage(orderId, 'error', response && response.message ? response.message : 'Update failed.');
+                        }
+                    },
+                    error: function () {
+                        spinner.addClass('d-none');
+                        select.prop('disabled', false);
+                        select.val(previousStatus);
+                        setRowMessage(orderId, 'error', 'Update failed.');
+                    }
+                });
+            });
+        });
+    </script>
+}

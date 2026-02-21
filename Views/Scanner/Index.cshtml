@@ -54,13 +54,14 @@
                     
                     <div class="mb-3">
                         <label asp-for="SelectedEmployeeId" class="form-label">Select Employee</label>
-                        <select asp-for="SelectedEmployeeId" class="form-select" asp-items="@(new SelectList(Model.Employees, "Id", "FullName"))">
+                        <select asp-for="SelectedEmployeeId" class="form-select" id="selectedEmployeeId" asp-items="@(new SelectList(Model.Employees, "Id", "FullName"))">
                             <option value="">-- Select Employee --</option>
                         </select>
                         <span asp-validation-for="SelectedEmployeeId" class="text-danger"></span>
+                        <div id="employeeSelectError" class="text-danger mt-2 d-none">Select an employee to continue.</div>
                     </div>
 
-                    <button type="submit" class="btn btn-success btn-lg">Assign & Start Scanning</button>
+                    <button type="submit" id="assignScanBtn" class="btn btn-success btn-lg" disabled>Assign & Start Scanning</button>
                 </form>
             </div>
         </div>
@@ -69,4 +70,33 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var select = document.getElementById('selectedEmployeeId');
+            var button = document.getElementById('assignScanBtn');
+            var error = document.getElementById('employeeSelectError');
+            if (!select || !button) return;
+
+            function updateState() {
+                var hasValue = select.value && select.value.trim() !== '';
+                button.disabled = !hasValue;
+                if (hasValue) {
+                    error.classList.add('d-none');
+                    select.classList.remove('is-invalid');
+                }
+            }
+
+            updateState();
+
+            select.addEventListener('change', updateState);
+
+            button.form.addEventListener('submit', function (e) {
+                if (button.disabled) {
+                    e.preventDefault();
+                    error.classList.remove('d-none');
+                    select.classList.add('is-invalid');
+                }
+            });
+        })();
+    </script>
 }
