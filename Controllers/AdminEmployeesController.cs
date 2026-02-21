@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using StockFlowPro.Data;
 using StockFlowPro.Models;
 
@@ -13,13 +14,15 @@ namespace StockFlowPro.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminEmployeesController : Controller
     {
-        private readonly FoodieDbContext _context;
+        private readonly StockFlowDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly ILogger<AdminEmployeesController> _logger;
 
-        public AdminEmployeesController(FoodieDbContext context, UserManager<IdentityUser> userManager)
+        public AdminEmployeesController(StockFlowDbContext context, UserManager<IdentityUser> userManager, ILogger<AdminEmployeesController> logger)
         {
             _context = context;
             _userManager = userManager;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Index()
@@ -37,44 +40,65 @@ namespace StockFlowPro.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Employee employee, string email, string password)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                // Create User
-                var user = new IdentityUser { UserName = email, Email = email, EmailConfirmed = true };
-                var result = await _userManager.CreateAsync(user, password);
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                _logger.LogWarning("Employee creation model validation failed: {Errors}", string.Join("; ", errors));
+                return View(employee);
+            }
 
-                if (result.Succeeded)
-                {
-                    // Assign Role based on Position
-                    if (!string.IsNullOrEmpty(employee.Position))
-                    {
-                        // Ensure role exists or use valid roles
-                        string role = employee.Position switch
-                        {
-                            "Office" => "OfficeWorker", // Map if necessary, or ensure input matches Role Name
-                            "Scanner" => "Scanner",
-                            "Packer" => "Packer",
-                            "Driver" => "Driver",
-                            _ => "OfficeWorker" // Default
-                        };
-                        
-                        // Check if role exists
-                        // For simplicity assuming roles exist as seeded
-                        await _userManager.AddToRoleAsync(user, role);
-                    }
+            var user = new IdentityUser { UserName = email, Email = email, EmailConfirmed = true };
+            var result = await _userManager.CreateAsync(user, password);
 
-                    employee.UserId = user.Id;
-                    _context.Add(employee);
-                    await _context.SaveChangesAsync();
-                    return RedirectToAction(nameof(Index));
-                }
-
+            if (!result.Succeeded)
+            {
+                var identityErrors = result.Errors.Select(e => $"{e.Code}: {e.Description}");
+                _logger.LogWarning("Identity user creation failed for {Email}: {Errors}", email, string.Join("; ", identityErrors));
                 foreach (var error in result.Errors)
                 {
                     ModelState.AddModelError(string.Empty, error.Description);
                 }
+                return View(employee);
             }
-            return View(employee);
+
+            string role = employee.Position switch
+            {
+                "Office" => "OfficeWorker",
+                "OfficeWorker" => "OfficeWorker",
+                "Scanner" => "Scanner",
+                "Packer" => "Packer",
+                "Driver" => "Driver",
+                _ => "OfficeWorker"
+            };
+
+            var roleResult = await _userManager.AddToRoleAsync(user, role);
+            if (!roleResult.Succeeded)
+            {
+                var roleErrors = roleResult.Errors.Select(e => $"{e.Code}: {e.Description}");
+                _logger.LogWarning("Role assignment failed for {Email} role {Role}: {Errors}", email, role, string.Join("; ", roleErrors));
+                foreach (var error in roleResult.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+                return View(employee);
+            }
+
+            employee.UserId = user.Id;
+            try
+            {
+                _context.Add(employee);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Employee save failed for {Email} {Name}", email, employee.FullName);
+                ModelState.AddModelError(string.Empty, "Could not save employee to the database.");
+                return View(employee);
+            }
+            return RedirectToAction(nameof(Index));
         }
 
         public async Task<IActionResult> Edit(int? id)

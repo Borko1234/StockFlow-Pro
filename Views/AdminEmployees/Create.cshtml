@@ -9,7 +9,7 @@
     <hr />
     <div class="row">
         <div class="col-md-6">
-            <form asp-action="Create">
+            <form asp-action="Create" method="post">
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                 
                 <h4>Personal Info</h4>
@@ -26,9 +26,10 @@
                 <div class="form-group">
                     <label asp-for="Position" class="control-label"></label>
                     <select asp-for="Position" class="form-control">
-                        <option value="OfficeWorker">Office Worker</option>
+                        <option value="Office">Office Worker</option>
                         <option value="Scanner">Scanner</option>
                         <option value="Packer">Packer</option>
+                        <option value="Driver">Driver</option>
                     </select>
                     <span asp-validation-for="Position" class="text-danger"></span>
                 </div>

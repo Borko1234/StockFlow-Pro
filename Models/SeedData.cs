@@ -14,8 +14,8 @@ namespace StockFlowPro.Models
     {
         public static async Task Initialize(IServiceProvider serviceProvider)
         {
-            using var context = new FoodieDbContext(
-                serviceProvider.GetRequiredService<DbContextOptions<FoodieDbContext>>());
+            using var context = new StockFlowDbContext(
+                serviceProvider.GetRequiredService<DbContextOptions<StockFlowDbContext>>());
 
             if (context.Products.Any() || context.Employees.Any() || context.Facilities.Any() || context.Orders.Any())
             {

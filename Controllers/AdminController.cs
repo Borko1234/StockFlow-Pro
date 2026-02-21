@@ -13,9 +13,9 @@ namespace StockFlowPro.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminController : Controller
     {
-        private readonly FoodieDbContext _context;
+        private readonly StockFlowDbContext _context;
 
-        public AdminController(FoodieDbContext context)
+        public AdminController(StockFlowDbContext context)
         {
             _context = context;
         }

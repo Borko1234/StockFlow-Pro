@@ -15,6 +15,10 @@
     <Content Remove="StockFlowPro.Client.Tests\**" />
     <EmbeddedResource Remove="StockFlowPro.Client.Tests\**" />
     <None Remove="StockFlowPro.Client.Tests\**" />
+    <Compile Remove="StockFlowPro.Tests\**" />
+    <Content Remove="StockFlowPro.Tests\**" />
+    <EmbeddedResource Remove="StockFlowPro.Tests\**" />
+    <None Remove="StockFlowPro.Tests\**" />
   </ItemGroup>
 
   <ItemGroup>

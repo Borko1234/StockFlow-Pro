@@ -6,65 +6,34 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StockFlowPro.Data;
 using StockFlowPro.Models.Enums;
-using StockFlowPro.Models;
 
 namespace StockFlowPro.Controllers
 {
     [Authorize(Roles = "Packer,Admin")]
     public class PackerController : Controller
     {
-        private readonly FoodieDbContext _context;
+        private readonly StockFlowDbContext _context;
 
-        public PackerController(FoodieDbContext context)
+        public PackerController(StockFlowDbContext context)
         {
             _context = context;
         }
 
         public async Task<IActionResult> Index()
         {
+            var today = DateTime.Today;
+            var tomorrow = today.AddDays(1);
             var orders = await _context.Orders
                 .Include(o => o.Facility)
-                .Include(o => o.OrderProcessing)
-                .ThenInclude(op => op.PreparedByEmployee)
                 .Where(o => o.OrderStatus == OrderStatus.Pending)
+                .Where(o => o.CreatedAt >= today && o.CreatedAt < tomorrow)
                 .OrderBy(o => o.CreatedAt)
                 .ToListAsync();
 
-            var employees = await _context.Employees
-                .Where(e => e.IsActive && e.Position == "Packer")
-                .OrderBy(e => e.FullName)
-                .ToListAsync();
-
-            ViewBag.PackerEmployees = employees;
             ViewData["DashboardTitle"] = "Packer Dashboard";
             ViewData["DashboardSubtitle"] = "Pending orders ready for packing";
 
             return View(orders);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AssignPacker(int orderId, int? employeeId)
-        {
-            var order = await _context.Orders
-                .Include(o => o.OrderProcessing)
-                .FirstOrDefaultAsync(o => o.Id == orderId);
-
-            if (order == null)
-            {
-                return RedirectToAction(nameof(Index));
-            }
-
-            if (order.OrderProcessing == null)
-            {
-                order.OrderProcessing = new OrderProcessing { OrderId = order.Id };
-                _context.OrderProcessings.Add(order.OrderProcessing);
-            }
-
-            order.OrderProcessing.PreparedByEmployeeId = employeeId;
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]

@@ -21,17 +21,19 @@
 
         <h4>Order Items</h4>
         <div id="orderItemsContainer">
-            <!-- Initial Row -->
-            <div class="row mb-2 item-row">
-                <div class="col-md-6">
-                    <select name="OrderItems[0].ProductId" class="form-select" asp-items="Model.Products">
-                        <option value="">-- Select Product --</option>
-                    </select>
+            @for (var i = 0; i < Model.OrderItems.Count; i++)
+            {
+                <div class="row mb-2 item-row">
+                    <div class="col-md-6">
+                        <select asp-for="OrderItems[i].ProductId" class="form-select" asp-items="Model.Products">
+                            <option value="">-- Select Product --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <input asp-for="OrderItems[i].Quantity" type="number" class="form-control" placeholder="Quantity" min="1" />
+                    </div>
                 </div>
-                <div class="col-md-4">
-                    <input type="number" name="OrderItems[0].Quantity" class="form-control" placeholder="Quantity" min="1" />
-                </div>
-            </div>
+            }
         </div>
 
         <button type="button" id="addItemBtn" class="btn btn-secondary mb-3">+ Add Item</button>
@@ -39,20 +41,28 @@
         <button type="submit" class="btn btn-primary btn-lg">Create Order</button>
         <a asp-controller="Home" asp-action="Index" class="btn btn-link">Cancel</a>
     </form>
+    <!--
+    <form asp-action="CreatePresetOrder" method="post" class="mt-3">
+        <button type="submit" class="btn btn-outline-primary">Quick Order: Burgas DC Izgrev (ID 67 x13)</button>
+    </form>
+    -->
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
         $(document).ready(function () {
-            var itemIndex = 1;
+            var itemIndex = $('#orderItemsContainer .item-row').length;
             $('#addItemBtn').click(function () {
                 var newRow = $('.item-row').first().clone();
-                
-                // Update names
-                newRow.find('select').attr('name', 'OrderItems[' + itemIndex + '].ProductId').val('');
-                newRow.find('input').attr('name', 'OrderItems[' + itemIndex + '].Quantity').val('');
-                
+                newRow.find('select')
+                    .attr('name', 'OrderItems[' + itemIndex + '].ProductId')
+                    .attr('id', 'OrderItems_' + itemIndex + '__ProductId')
+                    .val('');
+                newRow.find('input')
+                    .attr('name', 'OrderItems[' + itemIndex + '].Quantity')
+                    .attr('id', 'OrderItems_' + itemIndex + '__Quantity')
+                    .val('');
                 $('#orderItemsContainer').append(newRow);
                 itemIndex++;
             });

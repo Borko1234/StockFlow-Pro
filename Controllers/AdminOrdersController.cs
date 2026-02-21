@@ -17,10 +17,10 @@ namespace StockFlowPro.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminOrdersController : Controller
     {
-        private readonly FoodieDbContext _context;
+        private readonly StockFlowDbContext _context;
         private readonly IOrderService _orderService;
 
-        public AdminOrdersController(FoodieDbContext context, IOrderService orderService)
+        public AdminOrdersController(StockFlowDbContext context, IOrderService orderService)
         {
             _context = context;
             _orderService = orderService;

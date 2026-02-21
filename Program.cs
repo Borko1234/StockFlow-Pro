@@ -8,11 +8,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<FoodieDbContext>(options =>
+builder.Services.AddDbContext<StockFlowDbContext>(options =>
     options.UseSqlite(connectionString));
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = false)
-    .AddEntityFrameworkStores<FoodieDbContext>()
+    .AddEntityFrameworkStores<StockFlowDbContext>()
     .AddDefaultTokenProviders();
 
 builder.Services.AddScoped<IOrderService, OrderService>();
@@ -47,7 +47,7 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     try
     {
-        var context = services.GetRequiredService<FoodieDbContext>();
+        var context = services.GetRequiredService<StockFlowDbContext>();
         context.Database.Migrate(); // Ensure database is created and migrations applied
         
         // Custom Seeding (Admin User)

@@ -11,9 +11,9 @@ namespace StockFlowPro.Controllers
     [Authorize(Roles = "Driver,Admin")]
     public class DriverController : Controller
     {
-        private readonly FoodieDbContext _context;
+        private readonly StockFlowDbContext _context;
 
-        public DriverController(FoodieDbContext context)
+        public DriverController(StockFlowDbContext context)
         {
             _context = context;
         }

@@ -14,10 +14,10 @@ namespace StockFlowPro.Controllers
     [Authorize]
     public class HomeController : Controller
     {
-        private readonly FoodieDbContext _context;
+        private readonly StockFlowDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
 
-        public HomeController(FoodieDbContext context, UserManager<IdentityUser> userManager)
+        public HomeController(StockFlowDbContext context, UserManager<IdentityUser> userManager)
         {
             _context = context;
             _userManager = userManager;
@@ -25,6 +25,10 @@ namespace StockFlowPro.Controllers
 
         public async Task<IActionResult> Index()
         {
+            if (User.IsInRole("Admin"))
+            {
+                return RedirectToAction("Index", "Admin");
+            }
             if (User.IsInRole("Scanner"))
             {
                 return RedirectToAction("Index", "Scanner");

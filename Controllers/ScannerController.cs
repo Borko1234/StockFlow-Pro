@@ -15,10 +15,10 @@ namespace StockFlowPro.Controllers
     [Authorize(Roles = "Scanner,Admin")]
     public class ScannerController : Controller
     {
-        private readonly FoodieDbContext _context;
+        private readonly StockFlowDbContext _context;
         private readonly IOrderService _orderService;
 
-        public ScannerController(FoodieDbContext context, IOrderService orderService)
+        public ScannerController(StockFlowDbContext context, IOrderService orderService)
         {
             _context = context;
             _orderService = orderService;

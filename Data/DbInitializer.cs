@@ -12,8 +12,8 @@ namespace StockFlowPro.Data
     {
         public static async Task Initialize(IServiceProvider serviceProvider)
         {
-            using (var context = new FoodieDbContext(
-                serviceProvider.GetRequiredService<DbContextOptions<FoodieDbContext>>()))
+            using (var context = new StockFlowDbContext(
+                serviceProvider.GetRequiredService<DbContextOptions<StockFlowDbContext>>()))
             {
                 context.Database.EnsureCreated();
             }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using StockFlowPro.Data;
 using StockFlowPro.Models;
 using StockFlowPro.Models.Enums;
@@ -11,17 +12,26 @@ namespace StockFlowPro.Services
 {
     public class OrderService : IOrderService
     {
-        private readonly FoodieDbContext _context;
+        private readonly StockFlowDbContext _context;
+        private readonly ILogger<OrderService> _logger;
 
-        public OrderService(FoodieDbContext context)
+        public OrderService(StockFlowDbContext context, ILogger<OrderService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<Order> CreateOrderAsync(int facilityId, List<OrderItemDto> items)
         {
             if (items == null || !items.Any())
                 throw new ArgumentException("Order must contain at least one item.");
+
+            var facilityExists = await _context.Facilities.AnyAsync(f => f.Id == facilityId && f.IsActive);
+            if (!facilityExists)
+            {
+                _logger.LogWarning("Order creation failed: facility not found {FacilityId}", facilityId);
+                throw new InvalidOperationException("Selected facility not found.");
+            }
 
             var order = new Order
             {
@@ -57,9 +67,18 @@ namespace StockFlowPro.Services
             
             // Also init processing record
             var processing = new OrderProcessing { Order = order };
+            order.OrderProcessing = processing;
             _context.OrderProcessings.Add(processing);
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Order save failed for facility {FacilityId} with {ItemCount} items", facilityId, items.Count);
+                throw;
+            }
             return order;
         }
 

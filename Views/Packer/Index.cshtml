@@ -1,11 +1,11 @@
 @model List<StockFlowPro.Models.Order>
 
 @{
-    ViewData["Title"] = ViewData["DashboardTitle"] ?? "Packer Dashboard";
+    ViewData["Title"] = ViewData["DashboardTitle"] ?? "Today's Orders";
 }
 
 <div class="container mt-4">
-    <h2>@(ViewData["DashboardTitle"] ?? "Packer Dashboard")</h2>
+    <h2>@(ViewData["DashboardTitle"] ?? "Today's Orders")</h2>
     <p class="text-muted">@(ViewData["DashboardSubtitle"] ?? "Orders ready for packing")</p>
 
     @if (Model.Any())
@@ -16,9 +16,6 @@
                     <th>Order ID</th>
                     <th>Facility</th>
                     <th>Total Items</th>
-                    <th>Date</th>
-                    <th>Employee</th>
-                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,25 +25,6 @@
                         <td>@order.Id</td>
                         <td>@order.Facility?.Name</td>
                         <td>@order.TotalAmount.ToString("C")</td>
-                        <td>@order.CreatedAt.ToString("g")</td>
-                        <td>
-                            <form asp-action="AssignPacker" method="post" class="d-flex gap-2 align-items-center">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="orderId" value="@order.Id" />
-                                <select name="employeeId" class="form-select form-select-sm">
-                                    <option value="">Unassigned</option>
-                                    @foreach (var employee in (IEnumerable<StockFlowPro.Models.Employee>)ViewBag.PackerEmployees)
-                                    {
-                                        var selected = order.OrderProcessing?.PreparedByEmployeeId == employee.Id;
-                                        <option value="@employee.Id" selected="@(selected ? "selected" : null)">@employee.FullName</option>
-                                    }
-                                </select>
-                                <button type="submit" class="btn btn-primary btn-sm">Assign</button>
-                            </form>
-                        </td>
-                        <td>
-                            <button class="btn btn-primary btn-sm">View Details</button>
-                        </td>
                     </tr>
                 }
             </tbody>

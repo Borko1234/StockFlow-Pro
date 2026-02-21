@@ -4,9 +4,9 @@ using StockFlowPro.Models;
 
 namespace StockFlowPro.Data
 {
-    public class FoodieDbContext : IdentityDbContext
+    public class StockFlowDbContext : IdentityDbContext
     {
-        public FoodieDbContext(DbContextOptions<FoodieDbContext> options)
+        public StockFlowDbContext(DbContextOptions<StockFlowDbContext> options)
             : base(options)
         {
         }

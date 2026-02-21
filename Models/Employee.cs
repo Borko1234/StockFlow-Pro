@@ -10,7 +10,9 @@ namespace StockFlowPro.Models
         public int Id { get; set; }
         [Required]
         public string FullName { get; set; }
+        [Required]
         public string Position { get; set; }
+        [Required]
         public string Phone { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
