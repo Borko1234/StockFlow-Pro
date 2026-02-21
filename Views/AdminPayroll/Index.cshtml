@@ -1,0 +1,80 @@
+@model StockFlowPro.ViewModels.Admin.PayrollViewModel
+
+@{
+    ViewData["Title"] = "Payroll Report";
+    Layout = "_Layout";
+}
+
+<div class="container-fluid">
+    <h1 class="h3 mb-4 text-gray-800">Payroll / Performance Report</h1>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Filter Settings</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label>Start Date</label>
+                    <input type="date" name="startDate" class="form-control" value="@Model.StartDate.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-3">
+                    <label>End Date</label>
+                    <input type="date" name="endDate" class="form-control" value="@Model.EndDate.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-3">
+                    <label>Rate Per Order</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" name="rate" class="form-control" step="0.01" value="@Model.RatePerOrder" />
+                    </div>
+                </div>
+                <div class="col-md-3 align-self-end">
+                    <button type="submit" class="btn btn-primary w-100">Calculate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Employee Name</th>
+                            <th>Position</th>
+                            <th>Orders Processed</th>
+                            <th>Total Pay</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Items.Any())
+                        {
+                            foreach (var item in Model.Items)
+                            {
+                                <tr>
+                                    <td>@item.EmployeeName</td>
+                                    <td>@item.Position</td>
+                                    <td>@item.OrdersCount</td>
+                                    <td class="font-weight-bold text-success">@item.TotalAmount.ToString("C")</td>
+                                </tr>
+                            }
+                            <tr class="table-info font-weight-bold">
+                                <td colspan="2">Total</td>
+                                <td>@Model.Items.Sum(i => i.OrdersCount)</td>
+                                <td>@Model.Items.Sum(i => i.TotalAmount).ToString("C")</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center">No data found for the selected period.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

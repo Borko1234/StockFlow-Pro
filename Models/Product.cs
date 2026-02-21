@@ -8,11 +8,14 @@ namespace StockFlowPro.Models
     {
         public int Id { get; set; }
         [Required]
-        public string Name { get; set; }
-        public string Brand { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Brand { get; set; } = string.Empty;
         
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal CostPrice { get; set; }
         
         public int QuantityInStock { get; set; }
         public int MinimumStockLevel { get; set; }

@@ -32,6 +32,7 @@ namespace StockFlowPro.Services
             };
 
             decimal totalAmount = 0;
+            var orderItemsList = new List<OrderItem>();
 
             foreach (var itemDto in items)
             {
@@ -43,20 +44,25 @@ namespace StockFlowPro.Services
                 {
                     ProductId = itemDto.ProductId,
                     Quantity = itemDto.Quantity,
-                    UnitPrice = product.Price, // Snapshot price
+                    UnitPrice = product.Price,
                     TotalPrice = product.Price * itemDto.Quantity
                 };
 
                 totalAmount += orderItem.TotalPrice;
-                order.OrderItems.Add(orderItem);
+                orderItemsList.Add(orderItem);
             }
 
+            order.OrderItems = orderItemsList;
             order.TotalAmount = totalAmount;
 
             _context.Orders.Add(order);
-            
-            // Also init processing record
-            var processing = new OrderProcessing { Order = order };
+            await _context.SaveChangesAsync();
+
+            var processing = new OrderProcessing 
+            { 
+                OrderId = order.Id,
+                ProcessDate = DateTime.Now
+            };
             _context.OrderProcessings.Add(processing);
 
             await _context.SaveChangesAsync();
@@ -72,21 +78,10 @@ namespace StockFlowPro.Services
 
             if (order == null) return false;
 
-            // Business Logic: Decrease stock when moving to Prepared or Delivered (assuming Prepared is the commitment step)
-            // The prompt says: "When order moves to Prepared or Completed, decrease Product.QuantityInStock."
-            // We should ensure we only do this ONCE. 
-            // If current status is Created and new is Prepared -> Decrease.
-            
-            if (order.OrderStatus == OrderStatus.Created && (newStatus == OrderStatus.Prepared || newStatus == OrderStatus.Delivered))
+            if (order.OrderStatus == OrderStatus.Created && (newStatus == OrderStatus.Scanned || newStatus == OrderStatus.Delivered))
             {
                 foreach (var item in order.OrderItems)
                 {
-                    // Validate stock
-                    if (item.Product.QuantityInStock < item.Quantity)
-                    {
-                        throw new InvalidOperationException($"Not enough stock for product {item.Product.Name}. Available: {item.Product.QuantityInStock}, Requested: {item.Quantity}");
-                    }
-                    item.Product.QuantityInStock -= item.Quantity;
                 }
             }
 
@@ -97,21 +92,31 @@ namespace StockFlowPro.Services
 
         public async Task<bool> ScanOrderAsync(int orderId)
         {
-            var order = await _context.Orders.FindAsync(orderId);
+            var order = await _context.Orders
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
             if (order == null) return false;
 
-            // RULE: If Created -> Prepared
             if (order.OrderStatus == OrderStatus.Created)
             {
-                return await UpdateOrderStatusAsync(orderId, OrderStatus.Prepared);
+                // Reduce stock
+                foreach (var item in order.OrderItems)
+                {
+                    if (item.Product != null)
+                    {
+                        item.Product.QuantityInStock -= item.Quantity;
+                        if (item.Product.QuantityInStock < 0) item.Product.QuantityInStock = 0; // Prevent negative stock
+                    }
+                }
+                
+                order.OrderStatus = OrderStatus.Prepared; // Move to Prepared (Scanned)
+                await _context.SaveChangesAsync();
+                return true;
             }
 
-            // Optional: If Prepared -> Scanned? The prompt says "Subsequent actions will move it to Scanned and Delivered".
-            // But the specific scanner rule is "When the scanner inputs the Order ID of an order that is currently Created, the system must automatically change its status to Prepared."
-            // It doesn't explicitly say what to do if it is already Prepared.
-            // I will assume for now it only handles the Created -> Prepared transition as requested.
-            
-            return true;
+            return false;
         }
     }
 }

@@ -22,7 +22,6 @@ namespace StockFlowPro.Data
         {
             base.OnModelCreating(builder);
 
-            // Configure Decimal Precision
             var decimalProps = builder.Model.GetEntityTypes()
                 .SelectMany(t => t.GetProperties())
                 .Where(p => p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?));
@@ -32,10 +31,6 @@ namespace StockFlowPro.Data
                 property.SetColumnType("decimal(18,2)");
             }
 
-            // Many-to-Many OrderItems (Order <-> Product)
-            // Actually OrderItem is an explicit join entity with extra data (UnitPrice, Quantity), 
-            // so we configure it as One-to-Many from both sides.
-            
             builder.Entity<OrderItem>()
                 .HasOne(oi => oi.Order)
                 .WithMany(o => o.OrderItems)
@@ -46,7 +41,6 @@ namespace StockFlowPro.Data
                 .WithMany()
                 .HasForeignKey(oi => oi.ProductId);
 
-            // OrderProcessing One-to-One with Order
             builder.Entity<Order>()
                 .HasOne(o => o.OrderProcessing)
                 .WithOne(op => op.Order)

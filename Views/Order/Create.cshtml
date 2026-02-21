@@ -1,0 +1,85 @@
+@model StockFlowPro.ViewModels.Order.CreateOrderViewModel
+
+@{
+    ViewData["Title"] = "Create Order";
+    Layout = "_Layout";
+}
+
+<div class="container mt-4">
+    <h2>Create New Order</h2>
+    <hr />
+
+    <form asp-action="Create" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <div class="mb-3">
+            <label asp-for="FacilityId" class="form-label">Facility</label>
+            <select asp-for="FacilityId" class="form-select" asp-items="Model.Facilities">
+                <option value="">-- Select Facility --</option>
+            </select>
+            <span asp-validation-for="FacilityId" class="text-danger"></span>
+        </div>
+
+        <h4>Order Items</h4>
+        <div id="orderItemsContainer">
+            @for (var i = 0; i < Model.OrderItems.Count; i++)
+            {
+                <div class="row mb-2 item-row">
+                    <div class="col-md-6">
+                        <select name="OrderItems[@i].ProductId" class="form-select" asp-items="Model.Products" asp-for="OrderItems[i].ProductId">
+                            <option value="">-- Select Product --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <input name="OrderItems[@i].Quantity" type="number" class="form-control" placeholder="Quantity" min="1" asp-for="OrderItems[i].Quantity" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-danger remove-item">Remove</button>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <button type="button" id="addItemBtn" class="btn btn-secondary mb-3">+ Add Item</button>
+        <br />
+        <button type="submit" class="btn btn-primary btn-lg">Create Order</button>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-link">Cancel</a>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function () {
+            var itemIndex = @Model.OrderItems.Count;
+            
+            $('#addItemBtn').click(function () {
+                var newRow = `
+                    <div class="row mb-2 item-row">
+                        <div class="col-md-6">
+                            <select name="OrderItems[${itemIndex}].ProductId" class="form-select">
+                                ${$('#OrderItems_0__ProductId').html() || $('.item-row select').first().html()}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <input name="OrderItems[${itemIndex}].Quantity" type="number" class="form-control" placeholder="Quantity" min="1" />
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-danger remove-item">Remove</button>
+                        </div>
+                    </div>`;
+                
+                $('#orderItemsContainer').append(newRow);
+                itemIndex++;
+            });
+
+            $(document).on('click', '.remove-item', function() {
+                if ($('.item-row').length > 1) {
+                    $(this).closest('.item-row').remove();
+                } else {
+                    alert("Order must have at least one item.");
+                }
+            });
+        });
+    </script>
+}

@@ -6,7 +6,7 @@ namespace StockFlowPro.ViewModels
 {
     public class HomeViewModel
     {
-        public string UserName { get; set; }
-        public List<Order> TodaysOrders { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public List<StockFlowPro.Models.Order> TodaysOrders { get; set; } = new List<StockFlowPro.Models.Order>();
     }
 }

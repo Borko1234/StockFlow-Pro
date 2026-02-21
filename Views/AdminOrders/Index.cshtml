@@ -1,0 +1,85 @@
+@model StockFlowPro.ViewModels.Admin.AdminOrderListViewModel
+
+@{
+    ViewData["Title"] = "Manage Orders";
+    Layout = "_Layout";
+}
+
+<div class="container-fluid">
+    <h1 class="h3 mb-2 text-gray-800">Order Management</h1>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Filters</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label>Start Date</label>
+                    <input type="date" name="startDate" class="form-control" value="@Model.StartDate?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-3">
+                    <label>End Date</label>
+                    <input type="date" name="endDate" class="form-control" value="@Model.EndDate?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-3">
+                    <label>Status</label>
+                    <select name="status" class="form-control" asp-items="ViewBag.Statuses">
+                        <option value="">All Statuses</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>Facility</label>
+                    <select name="facilityId" class="form-control" asp-items="ViewBag.Facilities">
+                        <option value="">All Facilities</option>
+                    </select>
+                </div>
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                    <a asp-action="Index" class="btn btn-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Date</th>
+                            <th>Facility</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Prepared By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in Model.Orders)
+                        {
+                            <tr>
+                                <td>@order.Id</td>
+                                <td>@order.CreatedAt.ToShortDateString()</td>
+                                <td>@order.Facility?.Name</td>
+                                <td>@order.TotalAmount.ToString("C")</td>
+                                <td>@order.OrderStatus</td>
+                                <td>@order.OrderProcessing?.PreparedByEmployee?.FullName</td>
+                                <td>
+                                    @if (order.OrderStatus != StockFlowPro.Models.Enums.OrderStatus.Delivered)
+                                    {
+                                        <form asp-action="MarkDelivered" asp-route-id="@order.Id" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-success btn-sm">Deliver</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

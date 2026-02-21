@@ -1,0 +1,140 @@
+@model StockFlowPro.ViewModels.Admin.AdminDashboardViewModel
+
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    Layout = "_Layout";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Admin Dashboard</h1>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Orders</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalOrders</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Revenue (Delivered)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalRevenue.ToString("C")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending Orders</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.PendingOrders</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Row -->
+    <div class="row">
+
+        <!-- Top Products -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Top 3 Products (Delivered)</h6>
+                </div>
+                <div class="card-body">
+                    @foreach (var product in Model.TopProducts)
+                    {
+                        <h4 class="small font-weight-bold">@product.ProductName <span class="float-right">@product.PercentageOfTotal.ToString("F1")%</span></h4>
+                        <div class="progress mb-4">
+                            <div class="progress-bar bg-info" role="progressbar" style="width: @product.PercentageOfTotal%" aria-valuenow="@product.PercentageOfTotal" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <p class="mb-1">Sold: @product.UnitsSold | Revenue: @product.Revenue.ToString("C") | Profit Margin: @product.ProfitMargin.ToString("F1")%</p>
+                        <hr />
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Profit Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Monthly Profit Overview</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="profitChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+         <div class="col-md-3">
+             <a asp-controller="AdminOrders" asp-action="Index" class="btn btn-primary btn-block">Manage Orders</a>
+         </div>
+         <div class="col-md-3">
+             <a asp-controller="AdminEmployees" asp-action="Index" class="btn btn-secondary btn-block">Manage Employees</a>
+         </div>
+         <div class="col-md-3">
+             <a asp-controller="AdminFacilities" asp-action="Index" class="btn btn-warning btn-block">Manage Facilities</a>
+         </div>
+         <div class="col-md-3">
+             <a asp-controller="AdminProducts" asp-action="Index" class="btn btn-success btn-block">Manage Products</a>
+         </div>
+    </div>
+    <div class="row mt-3">
+         <div class="col-md-12">
+             <a asp-controller="AdminPayroll" asp-action="Index" class="btn btn-info btn-block">Payroll Report</a>
+         </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        var ctx = document.getElementById('profitChart').getContext('2d');
+        var myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.MonthlyProfits.Select(m => m.Month))),
+                datasets: [{
+                    label: 'Profit',
+                    data: @Html.Raw(Json.Serialize(Model.MonthlyProfits.Select(m => m.Profit))),
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }, {
+                    label: 'Revenue',
+                    data: @Html.Raw(Json.Serialize(Model.MonthlyProfits.Select(m => m.Revenue))),
+                    borderColor: 'rgb(54, 162, 235)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    </script>
+}

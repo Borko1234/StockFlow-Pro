@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StockFlowPro.Data;
 
@@ -10,9 +11,11 @@ using StockFlowPro.Data;
 namespace StockFlowPro.Migrations
 {
     [DbContext(typeof(FoodieDbContext))]
-    partial class FoodieDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260221221232_UpdateModels")]
+    partial class UpdateModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -350,7 +353,7 @@ namespace StockFlowPro.Migrations
                     b.Property<int?>("PreparedByEmployeeId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("ProcessDate")
+                    b.Property<DateTime?>("ProcessDate")
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("ScannedByEmployeeId")
@@ -532,7 +535,8 @@ namespace StockFlowPro.Migrations
                 {
                     b.Navigation("OrderItems");
 
-                    b.Navigation("OrderProcessing");
+                    b.Navigation("OrderProcessing")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
