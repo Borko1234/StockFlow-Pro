@@ -20,8 +20,7 @@ namespace StockFlowPro.Data
 
             var userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-            // Removed "Driver" from roles
-            string[] roleNames = { "Admin", "OfficeWorker", "Scanner", "Packer" };
+            string[] roleNames = { "Admin", "OfficeWorker", "Scanner", "Packer", "Driver" };
             foreach (var roleName in roleNames)
             {
                 if (!await roleManager.RoleExistsAsync(roleName))
@@ -74,7 +73,14 @@ namespace StockFlowPro.Data
                 if (result.Succeeded) await userManager.AddToRoleAsync(user, "Packer");
             }
 
-            // Removed Driver Seeding
+            // Seed Driver
+            var driverEmail = "driver@stockflow.com";
+            if (await userManager.FindByEmailAsync(driverEmail) == null)
+            {
+                var user = new IdentityUser { UserName = driverEmail, Email = driverEmail, EmailConfirmed = true };
+                var result = await userManager.CreateAsync(user, "Driver123!");
+                if (result.Succeeded) await userManager.AddToRoleAsync(user, "Driver");
+            }
         }
     }
 }

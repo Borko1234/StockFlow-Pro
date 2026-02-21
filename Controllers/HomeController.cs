@@ -33,6 +33,10 @@ namespace StockFlowPro.Controllers
             {
                 return RedirectToAction("Index", "Packer");
             }
+            if (User.IsInRole("Driver"))
+            {
+                return RedirectToAction("Index", "Driver");
+            }
 
             var user = await _userManager.GetUserAsync(User);
             var userName = user?.UserName ?? User.Identity.Name;

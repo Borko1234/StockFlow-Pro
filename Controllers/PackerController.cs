@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StockFlowPro.Data;
 using StockFlowPro.Models.Enums;
+using StockFlowPro.Models;
 
 namespace StockFlowPro.Controllers
 {
@@ -23,11 +24,47 @@ namespace StockFlowPro.Controllers
         {
             var orders = await _context.Orders
                 .Include(o => o.Facility)
-                .Where(o => o.OrderStatus == OrderStatus.Scanned) // Packers work on Scanned orders
+                .Include(o => o.OrderProcessing)
+                .ThenInclude(op => op.PreparedByEmployee)
+                .Where(o => o.OrderStatus == OrderStatus.Pending)
                 .OrderBy(o => o.CreatedAt)
                 .ToListAsync();
 
+            var employees = await _context.Employees
+                .Where(e => e.IsActive && e.Position == "Packer")
+                .OrderBy(e => e.FullName)
+                .ToListAsync();
+
+            ViewBag.PackerEmployees = employees;
+            ViewData["DashboardTitle"] = "Packer Dashboard";
+            ViewData["DashboardSubtitle"] = "Pending orders ready for packing";
+
             return View(orders);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AssignPacker(int orderId, int? employeeId)
+        {
+            var order = await _context.Orders
+                .Include(o => o.OrderProcessing)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            if (order == null)
+            {
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (order.OrderProcessing == null)
+            {
+                order.OrderProcessing = new OrderProcessing { OrderId = order.Id };
+                _context.OrderProcessings.Add(order.OrderProcessing);
+            }
+
+            order.OrderProcessing.PreparedByEmployeeId = employeeId;
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]

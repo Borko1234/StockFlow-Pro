@@ -79,7 +79,7 @@ namespace StockFlowPro.Models
                 "Teodor Vitaliev Rodyukov"
             };
 
-            var positions = new[] { "OfficeWorker", "Scanner", "Packer" }; // Removed Driver
+            var positions = new[] { "OfficeWorker", "Scanner", "Packer", "Driver" };
 
             var list = new List<Employee>();
             for (int i = 0; i < 20; i++)

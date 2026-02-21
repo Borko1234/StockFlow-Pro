@@ -32,6 +32,12 @@
                                 <a class="nav-link text-dark" asp-area="" asp-controller="Scanner" asp-action="Index">Scanner</a>
                             </li>
                         }
+                        @if (User.IsInRole("Driver"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Driver" asp-action="Index">Driver</a>
+                            </li>
+                        }
                         @if (User.IsInRole("OfficeWorker"))
                         {
                             <li class="nav-item">

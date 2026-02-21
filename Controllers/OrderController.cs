@@ -25,15 +25,28 @@ namespace StockFlowPro.Controllers
         }
 
         [HttpGet]
+        public IActionResult Index()
+        {
+            return RedirectToAction(nameof(Create));
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Create()
         {
             var facilities = await _context.Facilities.Where(f => f.IsActive).ToListAsync();
             var products = await _context.Products.ToListAsync();
+            var productOptions = products
+                .Select(p => new
+                {
+                    p.Id,
+                    DisplayName = $"{p.Id} - {p.Name} ({p.Brand})"
+                })
+                .ToList();
 
             var viewModel = new CreateOrderViewModel
             {
                 Facilities = new SelectList(facilities, "Id", "Name"),
-                Products = new SelectList(products, "Id", "Name")
+                Products = new SelectList(productOptions, "Id", "DisplayName")
             };
 
             return View(viewModel);
@@ -74,8 +87,15 @@ namespace StockFlowPro.Controllers
             // Reload lists if failed
             var facilities = await _context.Facilities.Where(f => f.IsActive).ToListAsync();
             var products = await _context.Products.ToListAsync();
+            var productOptions = products
+                .Select(p => new
+                {
+                    p.Id,
+                    DisplayName = $"{p.Id} - {p.Name} ({p.Brand})"
+                })
+                .ToList();
             model.Facilities = new SelectList(facilities, "Id", "Name");
-            model.Products = new SelectList(products, "Id", "Name");
+            model.Products = new SelectList(productOptions, "Id", "DisplayName");
 
             return View(model);
         }

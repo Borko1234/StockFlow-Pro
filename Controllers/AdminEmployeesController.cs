@@ -54,6 +54,7 @@ namespace StockFlowPro.Controllers
                             "Office" => "OfficeWorker", // Map if necessary, or ensure input matches Role Name
                             "Scanner" => "Scanner",
                             "Packer" => "Packer",
+                            "Driver" => "Driver",
                             _ => "OfficeWorker" // Default
                         };
                         
