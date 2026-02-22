@@ -26,7 +26,7 @@ namespace StockFlowPro.Services
             var order = new Order
             {
                 FacilityId = facilityId,
-                OrderStatus = OrderStatus.Created,
+                OrderStatus = OrderStatus.Pending,
                 CreatedAt = DateTime.Now,
                 OrderItems = new List<OrderItem>()
             };

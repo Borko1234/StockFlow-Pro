@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StockFlowPro.Data;
+using StockFlowPro.Models;
 using StockFlowPro.ViewModels;
 
 namespace StockFlowPro.Controllers
@@ -24,20 +25,34 @@ namespace StockFlowPro.Controllers
 
         public async Task<IActionResult> Index()
         {
+            if (User.IsInRole("Scanner"))
+            {
+                return RedirectToAction("Index", "Scanner");
+            }
+            if (User.IsInRole("Packer"))
+            {
+                return RedirectToAction("Index", "Packer");
+            }
+
             var user = await _userManager.GetUserAsync(User);
             var userName = user?.UserName ?? User.Identity.Name;
 
-            var today = DateTime.Today;
-            var orders = await _context.Orders
-                .Include(o => o.Facility)
-                .Where(o => o.CreatedAt.Date == today)
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
+            IQueryable<Order> ordersQuery = _context.Orders.Include(o => o.Facility);
+
+            // Office Workers see today's orders
+            if (User.IsInRole("OfficeWorker"))
+            {
+                var today = DateTime.Today;
+                ordersQuery = ordersQuery.Where(o => o.CreatedAt.Date == today);
+            }
+            // Admins see all orders
+
+            var orders = await ordersQuery.OrderByDescending(o => o.CreatedAt).ToListAsync();
 
             var model = new HomeViewModel
             {
                 UserName = userName,
-                TodaysOrders = orders
+                Orders = orders
             };
 
             return View(model);

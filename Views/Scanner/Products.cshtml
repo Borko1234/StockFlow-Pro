@@ -1,0 +1,125 @@
+@model StockFlowPro.ViewModels.ProductsViewModel
+
+@{
+    ViewData["Title"] = "Scan Products";
+}
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Order: #@Model.CurrentOrder.Id</h2>
+        <a asp-action="Index" class="btn btn-secondary">&lt; Back to Scanner</a>
+    </div>
+
+    <div class="row">
+        <!-- Scan Input -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    Scan Product
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="barcodeInput" class="form-label">Barcode / Product ID</label>
+                        <input type="text" class="form-control" id="barcodeInput" autofocus placeholder="Scan barcode...">
+                    </div>
+                    <button type="button" id="scanBtn" class="btn btn-success w-100">Scan</button>
+                    
+                    <div id="scanResult" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product List -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    Order Items
+                </div>
+                <div class="card-body">
+                    <input type="text" id="filterInput" class="form-control mb-3" placeholder="Filter products...">
+
+                    <table class="table table-striped" id="productsTable">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Product Name</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.CurrentOrder.OrderItems)
+                            {
+                                <tr data-product-id="@item.Product.Id" data-product-name="@item.Product.Name">
+                                    <td class="scan-status text-center">
+                                        <span class="badge bg-secondary">Pending</span>
+                                    </td>
+                                    <td>@item.Product.Name</td>
+                                    <td>@item.Quantity</td>
+                                    <td>@item.UnitPrice.ToString("C")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Focus on barcode input
+            $('#barcodeInput').focus();
+
+            // Handle Scan
+            $('#scanBtn').click(function () {
+                scanProduct();
+            });
+
+            $('#barcodeInput').keypress(function (e) {
+                if (e.which == 13) {
+                    scanProduct();
+                }
+            });
+
+            function scanProduct() {
+                var barcode = $('#barcodeInput').val();
+                var orderId = @Model.CurrentOrder.Id;
+
+                if (!barcode) return;
+
+                $.post('@Url.Action("ScanItem", "Scanner")', { orderId: orderId, barcode: barcode }, function (data) {
+                    if (data.success) {
+                        $('#scanResult').html('<div class="alert alert-success">Scanned: ' + data.productName + '</div>');
+                        
+                        // Update UI
+                        // Find row by product name or ID logic (simple name match for now)
+                        var row = $('#productsTable tbody tr').filter(function() {
+                            return $(this).data('product-name') == data.productName || $(this).data('product-id') == barcode;
+                        });
+
+                        if (row.length > 0) {
+                            row.find('.scan-status').html('<span class="badge bg-success">Scanned</span>');
+                            row.addClass('table-success');
+                        }
+
+                        $('#barcodeInput').val('').focus();
+                    } else {
+                        $('#scanResult').html('<div class="alert alert-danger">' + data.message + '</div>');
+                        $('#barcodeInput').val('').focus();
+                    }
+                });
+            }
+
+            // Filter
+            $('#filterInput').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('#productsTable tbody tr').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+        });
+    </script>
+}

@@ -77,6 +77,35 @@ namespace StockFlowPro.Data
                 var result = await userManager.CreateAsync(user, "Packer123!");
                 if (result.Succeeded) await userManager.AddToRoleAsync(user, "Packer");
             }
+
+            // Seed Office Worker
+            var officeEmail = "office@foodie.com";
+            if (await userManager.FindByEmailAsync(officeEmail) == null)
+            {
+                var user = new IdentityUser { UserName = officeEmail, Email = officeEmail, EmailConfirmed = true };
+                var result = await userManager.CreateAsync(user, "Office123!");
+                if (result.Succeeded) await userManager.AddToRoleAsync(user, "OfficeWorker");
+            }
+
+            // Seed Scanner
+            var scannerEmail = "scanner@foodie.com";
+            if (await userManager.FindByEmailAsync(scannerEmail) == null)
+            {
+                var user = new IdentityUser { UserName = scannerEmail, Email = scannerEmail, EmailConfirmed = true };
+                var result = await userManager.CreateAsync(user, "Scanner123!");
+                if (result.Succeeded) await userManager.AddToRoleAsync(user, "Scanner");
+            }
+
+            // Seed Packer
+            var packerEmail = "packer@foodie.com";
+            if (await userManager.FindByEmailAsync(packerEmail) == null)
+            {
+                var user = new IdentityUser { UserName = packerEmail, Email = packerEmail, EmailConfirmed = true };
+                var result = await userManager.CreateAsync(user, "Packer123!");
+                if (result.Succeeded) await userManager.AddToRoleAsync(user, "Packer");
+            }
+
+            // Removed Driver Seeding
         }
     }
 }

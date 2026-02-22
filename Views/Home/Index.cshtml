@@ -6,9 +6,9 @@
 
 <div class="text-center">
     <h1 class="display-4">Welcome, @Model.UserName!</h1>
-    <p>Here are today's orders (@DateTime.Today.ToShortDateString())</p>
+    <p>All orders</p>
 
-    @if (Model.TodaysOrders != null && Model.TodaysOrders.Any())
+    @if (Model.Orders != null && Model.Orders.Any())
     {
         <table class="table table-striped">
             <thead>
@@ -21,7 +21,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var order in Model.TodaysOrders)
+                @foreach (var order in Model.Orders)
                 {
                     <tr>
                         <td>@order.Id</td>
@@ -37,7 +37,7 @@
     else
     {
         <div class="alert alert-info">
-            No orders for today.
+            No orders found.
         </div>
     }
 </div>
