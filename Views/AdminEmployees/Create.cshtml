@@ -36,18 +36,25 @@
                 <hr />
                 <h4>User Account</h4>
                 <div class="form-check mb-3">
-                    <input type="checkbox" class="form-check-input" id="createLogin" name="createLogin" value="true" checked />
-                    <label class="form-check-label" for="createLogin">Create Login Account (@@stockflow.com)</label>
+                    @if (ViewBag.CreateLogin == null || (bool)ViewBag.CreateLogin)
+                    {
+                        <input type="checkbox" class="form-check-input" id="createLogin" name="createLogin" value="true" checked />
+                    }
+                    else
+                    {
+                        <input type="checkbox" class="form-check-input" id="createLogin" name="createLogin" value="true" />
+                    }
+                    <label class="form-check-label" for="createLogin">Create Login Account (@@stockflow.pro)</label>
                 </div>
 
                 <div id="loginFields">
                     <div class="form-group mb-3">
                         <label>Email (Username)</label>
-                        <input type="email" name="email" class="form-control" />
+                        <input type="text" id="emailInput" name="email" class="form-control" value="@ViewBag.Email" />
                     </div>
                     <div class="form-group mb-3">
                         <label>Password</label>
-                        <input type="password" name="password" class="form-control" />
+                        <input type="password" id="passwordInput" name="password" class="form-control" />
                     </div>
                 </div>
 
@@ -62,4 +69,32 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        const createLoginCheckbox = document.getElementById("createLogin");
+        const loginFields = document.getElementById("loginFields");
+        const emailInput = document.getElementById("emailInput");
+        const passwordInput = document.getElementById("passwordInput");
+
+        const toggleLoginFields = () => {
+            const enabled = createLoginCheckbox && createLoginCheckbox.checked;
+            if (loginFields)
+            {
+                loginFields.style.display = enabled ? "block" : "none";
+            }
+            if (emailInput)
+            {
+                emailInput.disabled = !enabled;
+            }
+            if (passwordInput)
+            {
+                passwordInput.disabled = !enabled;
+            }
+        };
+
+        if (createLoginCheckbox)
+        {
+            createLoginCheckbox.addEventListener("change", toggleLoginFields);
+            toggleLoginFields();
+        }
+    </script>
 }

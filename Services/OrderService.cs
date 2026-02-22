@@ -74,6 +74,7 @@ namespace StockFlowPro.Services
             var order = await _context.Orders
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
+                .Include(o => o.OrderProcessing)
                 .FirstOrDefaultAsync(o => o.Id == orderId);
 
             if (order == null) return false;
@@ -83,6 +84,12 @@ namespace StockFlowPro.Services
                 foreach (var item in order.OrderItems)
                 {
                 }
+            }
+
+            if (newStatus == OrderStatus.Created && order.OrderProcessing != null)
+            {
+                order.OrderProcessing.PreparedByEmployeeId = null;
+                order.OrderProcessing.PreparedByEmployee = null;
             }
 
             order.OrderStatus = newStatus;

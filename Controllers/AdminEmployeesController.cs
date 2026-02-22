@@ -30,6 +30,7 @@ namespace StockFlowPro.Controllers
 
         public IActionResult Create()
         {
+            ViewBag.CreateLogin = true;
             return View();
         }
 
@@ -37,18 +38,26 @@ namespace StockFlowPro.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Employee employee, string email, string password, bool createLogin)
         {
-            if (!ModelState.IsValid) return View(employee);
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Email = email;
+                ViewBag.CreateLogin = createLogin;
+                return View(employee);
+            }
 
             if (createLogin)
             {
                 if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
                 {
                     ModelState.AddModelError(string.Empty, "Email and Password are required for login.");
+                    ViewBag.Email = email;
+                    ViewBag.CreateLogin = createLogin;
                     return View(employee);
                 }
 
                 // Create User
-                var user = new IdentityUser { UserName = email, Email = email, EmailConfirmed = true };
+                var normalizedEmail = NormalizeEmail(email);
+                var user = new IdentityUser { UserName = normalizedEmail, Email = normalizedEmail, EmailConfirmed = true };
                 var result = await _userManager.CreateAsync(user, password);
 
                 if (result.Succeeded)
@@ -69,6 +78,8 @@ namespace StockFlowPro.Controllers
                 {
                     foreach (var error in result.Errors)
                         ModelState.AddModelError(string.Empty, error.Description);
+                    ViewBag.Email = normalizedEmail;
+                    ViewBag.CreateLogin = createLogin;
                     return View(employee);
                 }
             }
@@ -76,6 +87,13 @@ namespace StockFlowPro.Controllers
             _context.Add(employee);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
+        }
+
+        private static string NormalizeEmail(string email)
+        {
+            var trimmed = email?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(trimmed)) return string.Empty;
+            return trimmed.Contains("@") ? trimmed : $"{trimmed}@stockflow.pro";
         }
 
         // Edit/Delete actions omitted for brevity but should be here. 

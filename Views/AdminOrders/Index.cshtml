@@ -68,12 +68,19 @@
                                 <td>@order.OrderStatus</td>
                                 <td>@order.OrderProcessing?.PreparedByEmployee?.FullName</td>
                                 <td>
-                                    @if (order.OrderStatus != StockFlowPro.Models.Enums.OrderStatus.Delivered)
-                                    {
-                                        <form asp-action="MarkDelivered" asp-route-id="@order.Id" method="post" class="d-inline">
-                                            <button type="submit" class="btn btn-success btn-sm">Deliver</button>
-                                        </form>
-                                    }
+                                    <form asp-action="UpdateStatus" asp-route-id="@order.Id" method="post" class="d-flex gap-2 align-items-center">
+                                        <select name="newStatus" class="form-select form-select-sm">
+                                            <option value="Created" selected="@(order.OrderStatus == StockFlowPro.Models.Enums.OrderStatus.Created)">Created</option>
+                                            <option value="Prepared" selected="@(order.OrderStatus == StockFlowPro.Models.Enums.OrderStatus.Prepared)">Prepared</option>
+                                            <option value="Scanned" selected="@(order.OrderStatus == StockFlowPro.Models.Enums.OrderStatus.Scanned)">Scanned</option>
+                                            @if (order.OrderStatus == StockFlowPro.Models.Enums.OrderStatus.Scanned || order.OrderStatus == StockFlowPro.Models.Enums.OrderStatus.Delivered)
+                                            {
+                                                <option value="Delivered" selected="@(order.OrderStatus == StockFlowPro.Models.Enums.OrderStatus.Delivered)">Delivered</option>
+                                            }
+                                            <option value="Cancelled" selected="@(order.OrderStatus == StockFlowPro.Models.Enums.OrderStatus.Cancelled)">Cancelled</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                                    </form>
                                 </td>
                             </tr>
                         }

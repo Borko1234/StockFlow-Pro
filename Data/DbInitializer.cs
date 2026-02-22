@@ -31,7 +31,8 @@ namespace StockFlowPro.Data
             }
 
             // Seed Admin User
-            var adminEmail = "admin@stockflow.com";
+            var adminUserName = "admin";
+            var adminEmail = $"{adminUserName}@stockflow.pro";
             if (await userManager.FindByEmailAsync(adminEmail) == null)
             {
                 var user = new IdentityUser
@@ -48,7 +49,8 @@ namespace StockFlowPro.Data
             }
 
             // Seed Office Worker
-            var officeEmail = "office@stockflow.com";
+            var officeUserName = "office";
+            var officeEmail = $"{officeUserName}@stockflow.pro";
             if (await userManager.FindByEmailAsync(officeEmail) == null)
             {
                 var user = new IdentityUser { UserName = officeEmail, Email = officeEmail, EmailConfirmed = true };
@@ -57,7 +59,8 @@ namespace StockFlowPro.Data
             }
 
             // Seed Scanner
-            var scannerEmail = "scanner@stockflow.com";
+            var scannerUserName = "scanner";
+            var scannerEmail = $"{scannerUserName}@stockflow.pro";
             if (await userManager.FindByEmailAsync(scannerEmail) == null)
             {
                 var user = new IdentityUser { UserName = scannerEmail, Email = scannerEmail, EmailConfirmed = true };
@@ -66,7 +69,8 @@ namespace StockFlowPro.Data
             }
 
             // Seed Packer
-            var packerEmail = "packer@stockflow.com";
+            var packerUserName = "packer";
+            var packerEmail = $"{packerUserName}@stockflow.pro";
             if (await userManager.FindByEmailAsync(packerEmail) == null)
             {
                 var user = new IdentityUser { UserName = packerEmail, Email = packerEmail, EmailConfirmed = true };

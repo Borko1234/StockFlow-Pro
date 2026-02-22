@@ -43,11 +43,23 @@ namespace StockFlowPro.Controllers
                 query = query.Where(o => o.FacilityId == facilityId.Value);
 
             var orders = await query
-                .OrderByDescending(o => o.CreatedAt)
+                .OrderBy(o => o.OrderStatus == OrderStatus.Scanned ? 0 :
+                              o.OrderStatus == OrderStatus.Created ? 1 :
+                              o.OrderStatus == OrderStatus.Prepared ? 2 :
+                              o.OrderStatus == OrderStatus.Delivered ? 3 : 4)
+                .ThenByDescending(o => o.CreatedAt)
                 .ToListAsync();
 
             ViewBag.Facilities = new SelectList(await _context.Facilities.ToListAsync(), "Id", "Name", facilityId);
-            ViewBag.Statuses = new SelectList(Enum.GetValues(typeof(OrderStatus)));
+            var statusOptions = new[]
+            {
+                OrderStatus.Created,
+                OrderStatus.Prepared,
+                OrderStatus.Scanned,
+                OrderStatus.Delivered,
+                OrderStatus.Cancelled
+            };
+            ViewBag.Statuses = new SelectList(statusOptions, status);
 
             var model = new AdminOrderListViewModel
             {
@@ -78,17 +90,26 @@ namespace StockFlowPro.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> MarkDelivered(int id)
+        public async Task<IActionResult> UpdateStatus(int id, OrderStatus newStatus)
         {
-            var order = await _context.Orders.FindAsync(id);
+            var order = await _context.Orders
+                .Include(o => o.OrderProcessing)
+                .FirstOrDefaultAsync(o => o.Id == id);
             if (order == null) return NotFound();
 
-            // Allow marking as Delivered from Scanned (or even Pending/Created if admin forces it)
-            if (order.OrderStatus != OrderStatus.Delivered)
+            if (newStatus == OrderStatus.Delivered && order.OrderStatus != OrderStatus.Scanned && order.OrderStatus != OrderStatus.Delivered)
             {
-                order.OrderStatus = OrderStatus.Delivered;
-                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(Index));
             }
+
+            if (newStatus == OrderStatus.Created && order.OrderProcessing != null)
+            {
+                order.OrderProcessing.PreparedByEmployeeId = null;
+                order.OrderProcessing.PreparedByEmployee = null;
+            }
+
+            order.OrderStatus = newStatus;
+            await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
         }

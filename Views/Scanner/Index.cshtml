@@ -16,24 +16,17 @@
                     <form asp-action="Scan" method="post" class="mb-4">
                         <div class="input-group input-group-lg">
                             <span class="input-group-text" id="scan-icon">Order ID</span>
-                            <input type="number" name="orderId" class="form-control" placeholder="Scan or Enter Order ID..." aria-label="Order ID" aria-describedby="scan-icon" autofocus required>
+                            @if (Model.CurrentOrder == null)
+                            {
+                                <input type="number" id="orderIdInput" name="orderId" class="form-control" placeholder="Scan or Enter Order ID..." aria-label="Order ID" aria-describedby="scan-icon" required>
+                            }
+                            else
+                            {
+                                <input type="number" id="orderIdInput" name="orderId" class="form-control" placeholder="Scan or Enter Order ID..." aria-label="Order ID" aria-describedby="scan-icon" required>
+                            }
                             <button class="btn btn-success" type="submit">Scan Order</button>
                         </div>
                     </form>
-
-                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-                    {
-                        <div class="alert alert-danger" role="alert">
-                            <i class="bi bi-exclamation-triangle-fill"></i> @Model.ErrorMessage
-                        </div>
-                    }
-
-                    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
-                    {
-                        <div class="alert alert-success" role="alert">
-                            <i class="bi bi-check-circle-fill"></i> @Model.SuccessMessage
-                        </div>
-                    }
 
                     @if (Model.CurrentOrder != null)
                     {
@@ -43,19 +36,79 @@
                             </div>
                             <div class="card-body">
                                 <p><strong>Status:</strong> @Model.CurrentOrder.OrderStatus</p>
-                                <p><strong>Total Items:</strong> @Model.CurrentOrder.OrderItems.Sum(i => i.Quantity)</p>
+                                <p><strong>Total Items:</strong> @Model.TotalItems</p>
+                                <p><strong>Remaining Items:</strong> @Model.RemainingItems</p>
+                                <form asp-action="ScanProduct" method="post" class="mb-3" id="scanProductForm">
+                                    <input type="hidden" name="orderId" value="@Model.CurrentOrder.Id" />
+                                    <input type="hidden" name="remainingProductIds" value="@Model.RemainingProductIdsCsv" />
+                                    <div class="input-group input-group-lg">
+                                        <span class="input-group-text" id="product-scan-icon">Product ID</span>
+                                        <input type="number" id="productIdInput" name="productId" class="form-control" placeholder="Scan or Enter Product ID..." aria-label="Product ID" aria-describedby="product-scan-icon" required>
+                                        <button class="btn btn-primary" type="submit">Scan Product</button>
+                                    </div>
+                                    <div class="mt-3">
+                                        <label class="form-label">Prepared By (Packer)</label>
+                                        <select name="selectedPackerId" id="packerSelect" class="form-select">
+                                            <option value="">Select Packer</option>
+                                            @foreach (var packer in Model.Packers)
+                                            {
+                                                if (Model.SelectedPackerId == packer.Id)
+                                                {
+                                                    <option value="@packer.Id" selected="selected">@packer.FullName</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@packer.Id">@packer.FullName</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                </form>
                                 <hr />
                                 <h5>Items:</h5>
                                 <ul class="list-group">
-                                    @foreach (var item in Model.CurrentOrder.OrderItems)
+                                    @foreach (var item in Model.Items)
                                     {
-                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                            @item.Product.Name
-                                            <span class="badge bg-primary rounded-pill">x @item.Quantity</span>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center @(item.IsScanned ? "list-group-item-success" : "")">
+                                            <div>
+                                                <div>@item.ProductName</div>
+                                                <small class="text-muted">ID: @item.ProductId | Brand: @item.Brand | Price: @item.Price.ToString("C")</small>
+                                            </div>
+                                            @if (item.IsScanned)
+                                            {
+                                                <span class="badge bg-success rounded-pill">Scanned</span>
+                                            }
                                         </li>
                                     }
                                 </ul>
+                                <form asp-action="MarkOrderScanned" method="post" class="mt-3">
+                                    <input type="hidden" name="orderId" value="@Model.CurrentOrder.Id" />
+                                    <input type="hidden" name="remainingProductIds" value="@Model.RemainingProductIdsCsv" />
+                                    <input type="hidden" id="selectedPackerIdInput" name="selectedPackerId" value="@Model.SelectedPackerId" />
+                                    @if (Model.AllItemsScanned && Model.SelectedPackerId.HasValue)
+                                    {
+                                        <button class="btn btn-success" id="markOrderScannedButton" type="submit" data-remaining="@Model.RemainingItems">Mark Order as Scanned</button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-success" id="markOrderScannedButton" type="submit" data-remaining="@Model.RemainingItems" disabled>Mark Order as Scanned</button>
+                                    }
+                                </form>
                             </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                    {
+                        <div class="alert alert-danger mt-3" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill"></i> @Model.ErrorMessage
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+                    {
+                        <div class="alert alert-success mt-3" role="alert">
+                            <i class="bi bi-check-circle-fill"></i> @Model.SuccessMessage
                         </div>
                     }
                 </div>
@@ -63,3 +116,40 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        const packerSelect = document.getElementById("packerSelect");
+        const markButton = document.getElementById("markOrderScannedButton");
+        const packerHidden = document.getElementById("selectedPackerIdInput");
+        const scanProductForm = document.getElementById("scanProductForm");
+        const orderIdInput = document.getElementById("orderIdInput");
+        const productIdInput = document.getElementById("productIdInput");
+
+        const updateMarkButtonState = () => {
+            if (!markButton) return;
+            const remaining = parseInt(markButton.getAttribute("data-remaining") || "0", 10);
+            const hasPacker = packerSelect && packerSelect.value;
+            if (packerHidden && packerSelect)
+            {
+                packerHidden.value = packerSelect.value;
+            }
+            markButton.disabled = remaining > 0 || !hasPacker;
+        };
+
+        if (packerSelect && markButton)
+        {
+            packerSelect.addEventListener("change", updateMarkButtonState);
+            updateMarkButtonState();
+        }
+
+        if (productIdInput && scanProductForm)
+        {
+            productIdInput.focus({ preventScroll: true });
+        }
+        else if (orderIdInput)
+        {
+            orderIdInput.focus({ preventScroll: true });
+        }
+    </script>
+}
