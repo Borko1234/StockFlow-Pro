@@ -22,16 +22,13 @@ namespace StockFlowPro.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // Analytics Logic
             var totalOrders = await _context.Orders.CountAsync();
-            var pendingOrders = await _context.Orders.CountAsync(o => o.OrderStatus == OrderStatus.Created); // Or Pending if enum changed back
+            var pendingOrders = await _context.Orders.CountAsync(o => o.OrderStatus == OrderStatus.Created);
             
-            // REVENUE FIX: Only include DELIVERED orders
             var totalRevenue = await _context.Orders
                 .Where(o => o.OrderStatus == OrderStatus.Delivered)
                 .SumAsync(o => o.TotalAmount);
 
-            // Top 3 Products (Calculated based on Delivered orders)
             var topProductsQuery = await _context.OrderItems
                 .Where(oi => oi.Order.OrderStatus == OrderStatus.Delivered)
                 .GroupBy(oi => oi.ProductId)
@@ -67,23 +64,47 @@ namespace StockFlowPro.Controllers
                 };
             }).ToList();
 
-            // Monthly Profits (Last 6 months) - Delivered Only
-            var sixMonthsAgo = DateTime.Today.AddMonths(-6);
+            var today = DateTime.Today;
+            var startMonth = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
+            var endDateExclusive = today.AddDays(1);
             var monthlyData = await _context.Orders
-                .Where(o => o.CreatedAt >= sixMonthsAgo && o.OrderStatus == OrderStatus.Delivered)
+                .Where(o => o.CreatedAt >= startMonth && o.CreatedAt < endDateExclusive && o.OrderStatus == OrderStatus.Delivered)
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
                 .ToListAsync();
 
-            var monthlyProfits = monthlyData
+            var monthlyProfitLookup = monthlyData
                 .GroupBy(o => new { o.CreatedAt.Year, o.CreatedAt.Month })
-                .Select(g => new MonthlyProfitDto
+                .ToDictionary(
+                    g => new DateTime(g.Key.Year, g.Key.Month, 1),
+                    g => new MonthlyProfitDto
+                    {
+                        Month = $"{g.Key.Month}/{g.Key.Year}",
+                        Revenue = g.Sum(o => o.TotalAmount),
+                        Profit = g.Sum(o => o.OrderItems.Sum(oi => oi.TotalPrice - (oi.Quantity * oi.Product.CostPrice)))
+                    });
+
+            var monthlyProfits = Enumerable.Range(0, 6)
+                .Select(offset => startMonth.AddMonths(offset))
+                .Select(month =>
                 {
-                    Month = $"{g.Key.Month}/{g.Key.Year}",
-                    Revenue = g.Sum(o => o.TotalAmount),
-                    Profit = g.Sum(o => o.OrderItems.Sum(oi => oi.TotalPrice - (oi.Quantity * oi.Product.CostPrice)))
+                    var label = month.Year == today.Year && month.Month == today.Month
+                        ? $"{today.Month}/{today.Day}"
+                        : $"{month.Month}/{month.Year}";
+
+                    if (monthlyProfitLookup.TryGetValue(month, out var value))
+                    {
+                        value.Month = label;
+                        return value;
+                    }
+
+                    return new MonthlyProfitDto
+                    {
+                        Month = label,
+                        Revenue = 0,
+                        Profit = 0
+                    };
                 })
-                .OrderBy(m => new DateTime(int.Parse(m.Month.Split('/')[1]), int.Parse(m.Month.Split('/')[0]), 1))
                 .ToList();
 
             var model = new AdminDashboardViewModel
