@@ -33,6 +33,8 @@ namespace StockFlowPro.Tests.Controllers
         {
             // Arrange
             var context = GetDatabaseContext();
+            context.Products.Add(new Product { Name = "P1", Brand = "B1", Price = 10, QuantityInStock = 100 });
+            context.Products.Add(new Product { Name = "P2", Brand = "B2", Price = 20, QuantityInStock = 5 });
             var facility = new Facility { Name = "F1", Address = "A1", Phone = "1" };
             context.Facilities.Add(facility);
             context.Orders.Add(new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, Facility = facility, TotalAmount = 100 });
@@ -51,8 +53,40 @@ namespace StockFlowPro.Tests.Controllers
 
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
-            var model = Assert.IsType<HomeViewModel>(viewResult.ViewData.Model);
-            Assert.Equal(2, model.TodaysOrders.Count);
+            var model = Assert.IsType<DashboardViewModel>(viewResult.Model);
+            Assert.Equal("TestUser", model.UserName);
+            Assert.Equal(2, model.TotalProducts);
+        }
+
+        [Fact]
+        public async Task Index_HandlesNoUser_Gracefully()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var userManagerMock = GetMockUserManager();
+            userManagerMock.Setup(u => u.GetUserAsync(It.IsAny<System.Security.Claims.ClaimsPrincipal>()))
+                .ReturnsAsync((IdentityUser)null);
+
+            var controller = new HomeController(context, userManagerMock.Object);
+            var user = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(new[]
+            {
+                new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, "IdentityName")
+            }, "TestAuth"));
+            controller.ControllerContext = new ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = user } };
+
+            // Act
+            var result = await controller.Index();
+
+            // Assert
+            var viewResult = Assert.IsType<ViewResult>(result);
+            var model = Assert.IsType<DashboardViewModel>(viewResult.Model);
+            Assert.Equal("IdentityName", model.UserName);
+        }
+
+        private Mock<UserManager<IdentityUser>> GetMockUserManager()
+        {
+            var store = new Mock<IUserStore<IdentityUser>>();
+            return new Mock<UserManager<IdentityUser>>(store.Object, null, null, null, null, null, null, null, null);
         }
     }
 }

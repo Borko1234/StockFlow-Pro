@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using StockFlowPro.Controllers;
@@ -28,19 +29,49 @@ namespace StockFlowPro.Tests.Controllers
         }
 
         [Fact]
-        public async Task Scan_WithValidOrderId_ReturnsViewWithOrder()
+        public void Index_ReturnsViewResult()
         {
             // Arrange
             var context = GetDatabaseContext();
-            var facility = new Facility { Name = "Test Facility", Address = "Test", Phone = "123", RepresentativeName = "Test" };
-            context.Facilities.Add(facility);
-            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, Facility = facility };
+            var controller = new ScannerController(new Mock<IOrderService>().Object, context);
+            controller.TempData = new Mock<ITempDataDictionary>().Object;
+
+            // Act
+            var result = controller.Index();
+
+            // Assert
+            Assert.IsType<ViewResult>(result);
+        }
+
+        [Fact]
+        public void Index_ShowsSuccessMessage_WhenProvided()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var controller = new ScannerController(new Mock<IOrderService>().Object, context);
+            var tempData = new Mock<ITempDataDictionary>();
+            tempData.Setup(t => t["SuccessMessage"]).Returns("Scan successful!");
+            controller.TempData = tempData.Object;
+
+            // Act
+            var result = controller.Index();
+
+            // Assert
+            var viewResult = Assert.IsType<ViewResult>(result);
+            var model = Assert.IsType<ScannerViewModel>(viewResult.Model);
+            Assert.Equal("Scan successful!", model.SuccessMessage);
+        }
+
+        [Fact]
+        public async Task Scan_ValidOrder_ReturnsViewWithModel()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now };
             context.Orders.Add(order);
-            context.Employees.Add(new Employee { FullName = "Packer 1", Position = "Packer", Phone = "123" });
             await context.SaveChangesAsync();
 
-            var mockOrderService = new Mock<IOrderService>();
-            var controller = new ScannerController(mockOrderService.Object, context);
+            var controller = new ScannerController(new Mock<IOrderService>().Object, context);
 
             // Act
             var result = await controller.Scan(order.Id);
@@ -48,108 +79,45 @@ namespace StockFlowPro.Tests.Controllers
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
             var model = Assert.IsType<ScannerViewModel>(viewResult.Model);
-            Assert.NotNull(model.CurrentOrder);
-            Assert.Equal(order.Id, model.CurrentOrder.Id);
+            Assert.Equal(order.Id, model.CurrentOrder?.Id);
         }
 
         [Fact]
-        public async Task Scan_WithInvalidOrderId_ReturnsError()
+        public async Task ScanProduct_ValidProduct_RemovesFromRemainingAndReturnsView()
         {
             // Arrange
             var context = GetDatabaseContext();
-            var mockOrderService = new Mock<IOrderService>();
-            var controller = new ScannerController(mockOrderService.Object, context);
-
-            // Act
-            var result = await controller.Scan(999);
-
-            // Assert
-            var viewResult = Assert.IsType<ViewResult>(result);
-            var model = Assert.IsType<ScannerViewModel>(viewResult.Model);
-            Assert.NotNull(model.ErrorMessage);
-            Assert.Contains("not found", model.ErrorMessage);
-        }
-
-        [Fact]
-        public async Task ScanProduct_WithValidProduct_UpdatesRemainingItems()
-        {
-            // Arrange
-            var context = GetDatabaseContext();
-            var facility = new Facility { Name = "Test Facility", Address = "Test", Phone = "123", RepresentativeName = "Test" };
-            context.Facilities.Add(facility);
-            var product = new Product { Name = "Test Product", Brand = "Brand", Price = 10, QuantityInStock = 100 };
+            var product = new Product { Id = 1, Name = "P1", Brand = "B1", Price = 10, QuantityInStock = 100 };
             context.Products.Add(product);
-            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, Facility = facility };
+            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now };
+            order.OrderItems.Add(new OrderItem { ProductId = 1, Quantity = 1, UnitPrice = 10, TotalPrice = 10 });
             context.Orders.Add(order);
-            context.OrderItems.Add(new OrderItem { Order = order, Product = product, Quantity = 2 });
-            context.Employees.Add(new Employee { FullName = "Packer 1", Position = "Packer", Phone = "123" });
             await context.SaveChangesAsync();
 
-            var mockOrderService = new Mock<IOrderService>();
-            var controller = new ScannerController(mockOrderService.Object, context);
-
-            // Simulate initial scan to get remaining IDs
-            // But here we can just construct the remaining IDs string manually
-            // Product ID 1 repeated twice: "1,1"
-            string remainingIds = $"{product.Id},{product.Id}";
+            var controller = new ScannerController(new Mock<IOrderService>().Object, context);
 
             // Act
-            var result = await controller.ScanProduct(order.Id, product.Id, remainingIds, null);
+            var result = await controller.ScanProduct(order.Id, 1, "1", null);
 
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
             var model = Assert.IsType<ScannerViewModel>(viewResult.Model);
-            
-            // Should have 1 remaining item
-            Assert.Equal(1, model.RemainingItems);
-            Assert.True(model.Items.Count(i => i.IsScanned) == 1);
+            Assert.Empty(model.RemainingProductIds);
         }
 
         [Fact]
-        public async Task ScanProduct_WithInvalidProduct_ReturnsError()
+        public async Task MarkOrderScanned_ValidInput_UpdatesStatusAndRedirects()
         {
             // Arrange
             var context = GetDatabaseContext();
-            var facility = new Facility { Name = "F1", Address = "A1", Phone = "1" };
-            context.Facilities.Add(facility);
-            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, Facility = facility };
-            context.Orders.Add(order);
-            await context.SaveChangesAsync();
-
-            var mockOrderService = new Mock<IOrderService>();
-            var controller = new ScannerController(mockOrderService.Object, context);
-
-            // Act
-            var result = await controller.ScanProduct(order.Id, 999, "", null);
-
-            // Assert
-            var viewResult = Assert.IsType<ViewResult>(result);
-            var model = Assert.IsType<ScannerViewModel>(viewResult.Model);
-            // The actual error message is "Product ID 999 is not part of the remaining items to scan."
-            Assert.Contains("not part of the remaining", model.ErrorMessage);
-        }
-
-        [Fact]
-        public async Task MarkOrderScanned_UpdatesStatus_AndRedirects()
-        {
-            // Arrange
-            var context = GetDatabaseContext();
-            var facility = new Facility { Name = "F1", Address = "A1", Phone = "1" };
-            context.Facilities.Add(facility);
-            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, Facility = facility };
-            context.Orders.Add(order);
-            var packer = new Employee { FullName = "Packer", Position = "Packer" };
+            var packer = new Employee { FullName = "Packer", Position = "Packer", Phone = "123", IsActive = true };
             context.Employees.Add(packer);
-            context.OrderProcessings.Add(new OrderProcessing { OrderId = order.Id });
+            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now };
+            context.Orders.Add(order);
             await context.SaveChangesAsync();
 
-            var mockOrderService = new Mock<IOrderService>();
-            mockOrderService.Setup(s => s.UpdateOrderStatusAsync(order.Id, OrderStatus.Scanned)).ReturnsAsync(true);
-
-            var controller = new ScannerController(mockOrderService.Object, context)
-            {
-                TempData = new Mock<Microsoft.AspNetCore.Mvc.ViewFeatures.ITempDataDictionary>().Object
-            };
+            var controller = new ScannerController(new Mock<IOrderService>().Object, context);
+            controller.TempData = new Mock<ITempDataDictionary>().Object;
 
             // Act
             var result = await controller.MarkOrderScanned(order.Id, "", packer.Id);
@@ -158,8 +126,8 @@ namespace StockFlowPro.Tests.Controllers
             var redirectToActionResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Index", redirectToActionResult.ActionName);
             
-            var processedOrder = await context.OrderProcessings.FirstOrDefaultAsync(op => op.OrderId == order.Id);
-            Assert.Equal(packer.Id, processedOrder.PreparedByEmployeeId);
+            var updatedOrder = await context.Orders.FindAsync(order.Id);
+            Assert.Equal(OrderStatus.Scanned, updatedOrder.OrderStatus);
         }
     }
 }

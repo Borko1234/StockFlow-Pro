@@ -29,9 +29,11 @@ namespace StockFlowPro.Tests.Controllers
         {
             // Arrange
             var context = GetDatabaseContext();
-            var employee = new Employee { FullName = "Emp 1", Position = "Packer", Phone = "1" };
+            var employee = new Employee { FullName = "Emp 1", Position = "Scanner", Phone = "123" };
             context.Employees.Add(employee);
-            context.OrderProcessings.Add(new OrderProcessing { PreparedByEmployeeId = employee.Id, ProcessDate = DateTime.Today, Order = new Order { Id = 1, OrderStatus = StockFlowPro.Models.Enums.OrderStatus.Prepared, FacilityId = 1 } });
+            await context.SaveChangesAsync();
+
+            context.OrderProcessings.Add(new OrderProcessing { PreparedByEmployeeId = employee.Id, ProcessDate = DateTime.Today });
             await context.SaveChangesAsync();
 
             var controller = new AdminPayrollController(context);
@@ -41,9 +43,31 @@ namespace StockFlowPro.Tests.Controllers
 
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
-            var model = Assert.IsType<PayrollViewModel>(viewResult.ViewData.Model);
+            var model = Assert.IsType<PayrollViewModel>(viewResult.Model);
             Assert.Single(model.Items);
-            Assert.Equal(1, model.Items.First().OrdersCount);
+            Assert.Equal(0.5m, model.Items.First().TotalAmount);
+            Assert.Equal("Emp 1", model.Items.First().EmployeeName);
+        }
+
+        [Fact]
+        public async Task Index_UsesProvidedRate()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var employee = new Employee { FullName = "E1", Position = "P1", Phone = "123" };
+            context.Employees.Add(employee);
+            context.OrderProcessings.Add(new OrderProcessing { PreparedByEmployeeId = employee.Id, ProcessDate = DateTime.Today });
+            await context.SaveChangesAsync();
+
+            var controller = new AdminPayrollController(context);
+
+            // Act
+            var result = await controller.Index(null, null, 1.5m);
+
+            // Assert
+            var viewResult = Assert.IsType<ViewResult>(result);
+            var model = Assert.IsType<PayrollViewModel>(viewResult.Model);
+            Assert.Equal(1.5m, model.Items.First().TotalAmount);
         }
     }
 }

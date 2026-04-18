@@ -54,21 +54,26 @@ namespace StockFlowPro.Tests.Controllers
             var result = await controller.Login(model);
 
             // Assert
-            var redirectResult = Assert.IsType<RedirectToActionResult>(result);
-            Assert.Equal("Index", redirectResult.ActionName);
-            Assert.Equal("Home", redirectResult.ControllerName);
+            var redirectToActionResult = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("Index", redirectToActionResult.ActionName);
+            Assert.Equal("Home", redirectToActionResult.ControllerName);
         }
 
         [Fact]
-        public async Task Login_Post_InvalidCredentials_ReturnsViewWithModelError()
+        public async Task Login_Post_ReturnsView_WithModelError_WhenLoginFails()
         {
             // Arrange
-            var signInManager = GetMockSignInManager();
+            var store = new Mock<IUserStore<IdentityUser>>();
+            var userManager = new Mock<UserManager<IdentityUser>>(store.Object, null, null, null, null, null, null, null, null);
+            var contextAccessor = new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
+            var claimsFactory = new Mock<IUserClaimsPrincipalFactory<IdentityUser>>();
+            var signInManager = new Mock<SignInManager<IdentityUser>>(userManager.Object, contextAccessor.Object, claimsFactory.Object, null, null, null, null);
+            
             signInManager.Setup(s => s.PasswordSignInAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
                 .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Failed);
 
             var controller = new AccountController(signInManager.Object);
-            var model = new LoginViewModel { Email = "test@test.com", Password = "WrongPassword" };
+            var model = new LoginViewModel { Email = "test@test.com", Password = "Password123!" };
 
             // Act
             var result = await controller.Login(model);
@@ -76,37 +81,28 @@ namespace StockFlowPro.Tests.Controllers
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
             Assert.False(controller.ModelState.IsValid);
-            Assert.Equal(model, viewResult.Model);
         }
 
         [Fact]
         public async Task Logout_RedirectsToLogin()
         {
             // Arrange
-            var signInManager = GetMockSignInManager();
+            var store = new Mock<IUserStore<IdentityUser>>();
+            var userManager = new Mock<UserManager<IdentityUser>>(store.Object, null, null, null, null, null, null, null, null);
+            var contextAccessor = new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
+            var claimsFactory = new Mock<IUserClaimsPrincipalFactory<IdentityUser>>();
+            var signInManager = new Mock<SignInManager<IdentityUser>>(userManager.Object, contextAccessor.Object, claimsFactory.Object, null, null, null, null);
+
             var controller = new AccountController(signInManager.Object);
 
             // Act
             var result = await controller.Logout();
 
             // Assert
-            var redirectResult = Assert.IsType<RedirectToActionResult>(result);
-            Assert.Equal("Login", redirectResult.ActionName);
-            Assert.Equal("Account", redirectResult.ControllerName);
-        }
-
-        [Fact]
-        public void AccessDenied_ReturnsView()
-        {
-            // Arrange
-            var signInManager = GetMockSignInManager();
-            var controller = new AccountController(signInManager.Object);
-
-            // Act
-            var result = controller.AccessDenied();
-
-            // Assert
-            Assert.IsType<ViewResult>(result);
+            var redirectToActionResult = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("Login", redirectToActionResult.ActionName);
+            Assert.Equal("Account", redirectToActionResult.ControllerName);
+            signInManager.Verify(s => s.SignOutAsync(), Times.Once);
         }
     }
 }

@@ -4,11 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using StockFlowPro.Controllers;
 using StockFlowPro.Data;
 using StockFlowPro.Models;
-using StockFlowPro.ViewModels.Admin;
 using StockFlowPro.Models.Enums;
+using StockFlowPro.Services;
+using StockFlowPro.ViewModels.Admin;
 using Xunit;
 
 namespace StockFlowPro.Tests.Controllers
@@ -30,10 +32,9 @@ namespace StockFlowPro.Tests.Controllers
         {
             // Arrange
             var context = GetDatabaseContext();
-            var facility = new Facility { Name = "Test Facility", Address = "123 Test St", Phone = "555-1234", RepresentativeName = "John Doe" };
+            var facility = new Facility { Name = "Test", Address = "Test", Phone = "123", RepresentativeName = "Test" };
             context.Facilities.Add(facility);
-            context.Orders.Add(new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, Facility = facility });
-            context.Orders.Add(new Order { OrderStatus = OrderStatus.Delivered, CreatedAt = DateTime.Now.AddDays(-1), Facility = facility });
+            context.Orders.Add(new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, Facility = facility, TotalAmount = 100 });
             await context.SaveChangesAsync();
 
             var controller = new AdminOrdersController(context);
@@ -43,8 +44,9 @@ namespace StockFlowPro.Tests.Controllers
 
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
-            var model = Assert.IsAssignableFrom<AdminOrderListViewModel>(viewResult.ViewData.Model);
-            Assert.Equal(2, model.Orders.Count);
+            var model = Assert.IsType<AdminOrderListViewModel>(viewResult.Model);
+            Assert.Single(model.Orders);
+            Assert.Equal(OrderStatus.Created, model.Orders.First().OrderStatus);
         }
 
         [Fact]
@@ -52,22 +54,22 @@ namespace StockFlowPro.Tests.Controllers
         {
             // Arrange
             var context = GetDatabaseContext();
-            var facility = new Facility { Name = "Test Facility", Address = "123 Test St", Phone = "555-1234", RepresentativeName = "John Doe" };
+            var facility = new Facility { Name = "Test", Address = "Test", Phone = "123", RepresentativeName = "Test" };
             context.Facilities.Add(facility);
-            context.Orders.Add(new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, Facility = facility });
-            context.Orders.Add(new Order { OrderStatus = OrderStatus.Delivered, CreatedAt = DateTime.Now.AddDays(-1), Facility = facility });
+            context.Orders.Add(new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, Facility = facility, TotalAmount = 100 });
+            context.Orders.Add(new Order { OrderStatus = OrderStatus.Scanned, CreatedAt = DateTime.Now, Facility = facility, TotalAmount = 200 });
             await context.SaveChangesAsync();
 
             var controller = new AdminOrdersController(context);
 
             // Act
-            var result = await controller.Index(null, null, OrderStatus.Created, null);
+            var result = await controller.Index(null, null, OrderStatus.Scanned, null);
 
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
-            var model = Assert.IsAssignableFrom<AdminOrderListViewModel>(viewResult.ViewData.Model);
+            var model = Assert.IsType<AdminOrderListViewModel>(viewResult.Model);
             Assert.Single(model.Orders);
-            Assert.Equal(OrderStatus.Created, model.Orders.First().OrderStatus);
+            Assert.Equal(OrderStatus.Scanned, model.Orders.First().OrderStatus);
         }
 
         [Fact]
@@ -75,49 +77,93 @@ namespace StockFlowPro.Tests.Controllers
         {
             // Arrange
             var context = GetDatabaseContext();
-            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, Facility = new Facility { Name = "Test", Address = "Test", Phone = "123", RepresentativeName = "Test" } };
+            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, TotalAmount = 100 };
             context.Orders.Add(order);
             await context.SaveChangesAsync();
 
             var controller = new AdminOrdersController(context);
 
             // Act
-            var result = await controller.UpdateStatus(order.Id, OrderStatus.Prepared);
+            var result = await controller.UpdateStatus(order.Id, OrderStatus.Scanned);
 
             // Assert
             var redirectToActionResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Index", redirectToActionResult.ActionName);
             
             var updatedOrder = await context.Orders.FindAsync(order.Id);
-            Assert.Equal(OrderStatus.Prepared, updatedOrder.OrderStatus);
+            Assert.Equal(OrderStatus.Scanned, updatedOrder.OrderStatus);
         }
 
         [Fact]
-        public async Task UpdateStatus_ClearsPreparedBy_WhenStatusIsCreated()
+        public async Task Details_ReturnsView_WithOrder()
         {
             // Arrange
             var context = GetDatabaseContext();
-            var employee = new Employee { FullName = "Packer", Position = "Packer", Phone = "123" };
-            context.Employees.Add(employee);
-            var order = new Order 
-            { 
-                OrderStatus = OrderStatus.Prepared, 
-                CreatedAt = DateTime.Now, 
-                Facility = new Facility { Name = "Test", Address = "Test", Phone = "123", RepresentativeName = "Test" },
-                OrderProcessing = new OrderProcessing { PreparedByEmployeeId = employee.Id }
-            };
+            var facility = new Facility { Name = "F1", Address = "A1", Phone = "123", RepresentativeName = "Rep" };
+            context.Facilities.Add(facility);
+            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, Facility = facility, TotalAmount = 100 };
             context.Orders.Add(order);
             await context.SaveChangesAsync();
 
             var controller = new AdminOrdersController(context);
 
             // Act
-            var result = await controller.UpdateStatus(order.Id, OrderStatus.Created);
+            var result = await controller.Details(order.Id);
 
             // Assert
-            var updatedOrder = await context.Orders.Include(o => o.OrderProcessing).FirstOrDefaultAsync(o => o.Id == order.Id);
+            var viewResult = Assert.IsType<ViewResult>(result);
+            var model = Assert.IsType<Order>(viewResult.Model);
+            Assert.Equal(order.Id, model.Id);
+        }
+
+        [Fact]
+        public async Task Details_ReturnsNotFound_WhenOrderDoesNotExist()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var controller = new AdminOrdersController(context);
+
+            // Act
+            var result = await controller.Details(999);
+
+            // Assert
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public async Task UpdateStatus_ReturnsNotFound_WhenOrderDoesNotExist()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var controller = new AdminOrdersController(context);
+
+            // Act
+            var result = await controller.UpdateStatus(999, OrderStatus.Scanned);
+
+            // Assert
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public async Task UpdateStatus_RedirectsToIndex_WhenInvalidStatusTransition()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, TotalAmount = 100 };
+            context.Orders.Add(order);
+            await context.SaveChangesAsync();
+
+            var controller = new AdminOrdersController(context);
+
+            // Act
+            var result = await controller.UpdateStatus(order.Id, OrderStatus.Delivered);
+
+            // Assert
+            var redirectToActionResult = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("Index", redirectToActionResult.ActionName);
+            
+            var updatedOrder = await context.Orders.FindAsync(order.Id);
             Assert.Equal(OrderStatus.Created, updatedOrder.OrderStatus);
-            Assert.Null(updatedOrder.OrderProcessing.PreparedByEmployeeId);
         }
     }
 }

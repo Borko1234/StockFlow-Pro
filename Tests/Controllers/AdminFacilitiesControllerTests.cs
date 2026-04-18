@@ -28,8 +28,8 @@ namespace StockFlowPro.Tests.Controllers
         {
             // Arrange
             var context = GetDatabaseContext();
-            context.Facilities.Add(new Facility { Name = "Facility 1", Address = "Address 1", Phone = "123" });
-            context.Facilities.Add(new Facility { Name = "Facility 2", Address = "Address 2", Phone = "456" });
+            context.Facilities.Add(new Facility { Name = "F1", Address = "A1", Phone = "123", RepresentativeName = "R1" });
+            context.Facilities.Add(new Facility { Name = "F2", Address = "A2", Phone = "456", RepresentativeName = "R2" });
             await context.SaveChangesAsync();
 
             var controller = new AdminFacilitiesController(context);
@@ -49,7 +49,7 @@ namespace StockFlowPro.Tests.Controllers
             // Arrange
             var context = GetDatabaseContext();
             var controller = new AdminFacilitiesController(context);
-            var facility = new Facility { Name = "New Facility", Address = "New Address", Phone = "789" };
+            var facility = new Facility { Name = "New Facility", Address = "Address", Phone = "123", RepresentativeName = "Rep" };
 
             // Act
             var result = await controller.Create(facility);
@@ -62,32 +62,11 @@ namespace StockFlowPro.Tests.Controllers
         }
 
         [Fact]
-        public async Task Edit_UpdatesFacility_AndRedirects()
-        {
-            // Arrange
-            var context = GetDatabaseContext();
-            var facility = new Facility { Name = "Old Facility", Address = "Old Address", Phone = "123" };
-            context.Facilities.Add(facility);
-            await context.SaveChangesAsync();
-
-            var controller = new AdminFacilitiesController(context);
-            facility.Name = "Updated Facility";
-
-            // Act
-            var result = await controller.Edit(facility.Id, facility);
-
-            // Assert
-            var redirectToActionResult = Assert.IsType<RedirectToActionResult>(result);
-            Assert.Equal("Index", redirectToActionResult.ActionName);
-            Assert.Equal("Updated Facility", context.Facilities.First().Name);
-        }
-
-        [Fact]
         public async Task DeleteConfirmed_RemovesFacility_AndRedirects()
         {
             // Arrange
             var context = GetDatabaseContext();
-            var facility = new Facility { Name = "To Delete", Address = "Address", Phone = "123" };
+            var facility = new Facility { Name = "To Delete", Address = "Address", Phone = "123", RepresentativeName = "Rep" };
             context.Facilities.Add(facility);
             await context.SaveChangesAsync();
 
@@ -100,6 +79,27 @@ namespace StockFlowPro.Tests.Controllers
             var redirectToActionResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Index", redirectToActionResult.ActionName);
             Assert.Equal(0, context.Facilities.Count());
+        }
+
+        [Fact]
+        public async Task Edit_UpdatesFacility_AndRedirects()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var facility = new Facility { Name = "Old Name", Address = "A1", Phone = "123", RepresentativeName = "Rep" };
+            context.Facilities.Add(facility);
+            await context.SaveChangesAsync();
+
+            var controller = new AdminFacilitiesController(context);
+            facility.Name = "Updated Name";
+
+            // Act
+            var result = await controller.Edit(facility.Id, facility);
+
+            // Assert
+            var redirectToActionResult = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("Index", redirectToActionResult.ActionName);
+            Assert.Equal("Updated Name", context.Facilities.First().Name);
         }
     }
 }

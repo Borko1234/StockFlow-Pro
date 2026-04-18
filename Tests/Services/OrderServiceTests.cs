@@ -113,5 +113,80 @@ namespace StockFlowPro.Tests.Services
             Assert.Equal(OrderStatus.Created, updatedOrder.OrderStatus);
             Assert.Null(updatedOrder.OrderProcessing.PreparedByEmployeeId);
         }
+
+        [Fact]
+        public async Task UpdateOrderStatusAsync_ReducesStock_WhenMovingToScanned()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var product = new Product { Name = "P1", Brand = "B1", Price = 10, QuantityInStock = 100 };
+            context.Products.Add(product);
+            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, FacilityId = 1 };
+            order.OrderItems.Add(new OrderItem { Product = product, Quantity = 5, UnitPrice = 10, TotalPrice = 50 });
+            context.Orders.Add(order);
+            await context.SaveChangesAsync();
+
+            var service = new OrderService(context);
+
+            // Act
+            await service.UpdateOrderStatusAsync(order.Id, OrderStatus.Scanned);
+
+            // Assert
+            var updatedProduct = await context.Products.FindAsync(product.Id);
+            Assert.Equal(95, updatedProduct.QuantityInStock);
+        }
+
+        [Fact]
+        public async Task ScanOrderAsync_ReducesStock_AndMovesToPrepared()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var product = new Product { Name = "P1", Brand = "B1", Price = 10, QuantityInStock = 100 };
+            context.Products.Add(product);
+            var order = new Order { OrderStatus = OrderStatus.Created, CreatedAt = DateTime.Now, FacilityId = 1 };
+            order.OrderItems.Add(new OrderItem { Product = product, Quantity = 5, UnitPrice = 10, TotalPrice = 50 });
+            context.Orders.Add(order);
+            await context.SaveChangesAsync();
+
+            var service = new OrderService(context);
+
+            // Act
+            var result = await service.ScanOrderAsync(order.Id);
+
+            // Assert
+            Assert.True(result);
+            var updatedOrder = await context.Orders.FindAsync(order.Id);
+            Assert.Equal(OrderStatus.Prepared, updatedOrder.OrderStatus);
+            var updatedProduct = await context.Products.FindAsync(product.Id);
+            Assert.Equal(95, updatedProduct.QuantityInStock);
+        }
+
+        [Fact]
+        public async Task UpdateOrderStatusAsync_ReturnsFalse_WhenOrderNotFound()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var service = new OrderService(context);
+
+            // Act
+            var result = await service.UpdateOrderStatusAsync(999, OrderStatus.Scanned);
+
+            // Assert
+            Assert.False(result);
+        }
+
+        [Fact]
+        public async Task ScanOrderAsync_ReturnsFalse_WhenOrderNotFound()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var service = new OrderService(context);
+
+            // Act
+            var result = await service.ScanOrderAsync(999);
+
+            // Assert
+            Assert.False(result);
+        }
     }
 }

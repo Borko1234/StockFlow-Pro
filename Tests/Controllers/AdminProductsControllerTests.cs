@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using StockFlowPro.Controllers;
 using StockFlowPro.Data;
 using StockFlowPro.Models;
+using StockFlowPro.ViewModels.Admin;
 using Xunit;
 
 namespace StockFlowPro.Tests.Controllers
@@ -28,8 +29,8 @@ namespace StockFlowPro.Tests.Controllers
         {
             // Arrange
             var context = GetDatabaseContext();
-            context.Products.Add(new Product { Name = "Product 1", Brand = "Brand 1", Price = 10 });
-            context.Products.Add(new Product { Name = "Product 2", Brand = "Brand 2", Price = 20 });
+            context.Products.Add(new Product { Name = "P1", Brand = "B1", Price = 10, QuantityInStock = 100 });
+            context.Products.Add(new Product { Name = "P2", Brand = "B2", Price = 20, QuantityInStock = 200 });
             await context.SaveChangesAsync();
 
             var controller = new AdminProductsController(context);
@@ -39,8 +40,8 @@ namespace StockFlowPro.Tests.Controllers
 
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
-            var model = Assert.IsAssignableFrom<List<Product>>(viewResult.ViewData.Model);
-            Assert.Equal(2, model.Count);
+            var model = Assert.IsType<ProductListViewModel>(viewResult.Model);
+            Assert.Equal(2, model.Products.Count);
         }
 
         [Fact]
@@ -49,7 +50,7 @@ namespace StockFlowPro.Tests.Controllers
             // Arrange
             var context = GetDatabaseContext();
             var controller = new AdminProductsController(context);
-            var product = new Product { Name = "New Product", Brand = "New Brand", Price = 30 };
+            var product = new Product { Name = "New Product", Brand = "Brand", Price = 10, QuantityInStock = 100 };
 
             // Act
             var result = await controller.Create(product);
@@ -66,12 +67,12 @@ namespace StockFlowPro.Tests.Controllers
         {
             // Arrange
             var context = GetDatabaseContext();
-            var product = new Product { Name = "Old Product", Brand = "Old Brand", Price = 10 };
+            var product = new Product { Name = "Old Name", Brand = "Brand", Price = 10, QuantityInStock = 100 };
             context.Products.Add(product);
             await context.SaveChangesAsync();
 
             var controller = new AdminProductsController(context);
-            product.Name = "Updated Product";
+            product.Name = "Updated Name";
 
             // Act
             var result = await controller.Edit(product.Id, product);
@@ -79,7 +80,7 @@ namespace StockFlowPro.Tests.Controllers
             // Assert
             var redirectToActionResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Index", redirectToActionResult.ActionName);
-            Assert.Equal("Updated Product", context.Products.First().Name);
+            Assert.Equal("Updated Name", context.Products.First().Name);
         }
 
         [Fact]
@@ -87,7 +88,7 @@ namespace StockFlowPro.Tests.Controllers
         {
             // Arrange
             var context = GetDatabaseContext();
-            var product = new Product { Name = "To Delete", Brand = "Brand", Price = 10 };
+            var product = new Product { Name = "To Delete", Brand = "Brand", Price = 10, QuantityInStock = 100 };
             context.Products.Add(product);
             await context.SaveChangesAsync();
 
@@ -100,6 +101,95 @@ namespace StockFlowPro.Tests.Controllers
             var redirectToActionResult = Assert.IsType<RedirectToActionResult>(result);
             Assert.Equal("Index", redirectToActionResult.ActionName);
             Assert.Equal(0, context.Products.Count());
+        }
+
+        [Fact]
+        public async Task LookupByProductId_ReturnsJsonResult_WithFoundTrue()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var product = new Product { Name = "P1", Brand = "B1", Price = 10, QuantityInStock = 100 };
+            context.Products.Add(product);
+            await context.SaveChangesAsync();
+
+            var controller = new AdminProductsController(context);
+
+            // Act
+            var result = await controller.LookupByProductId(product.Id.ToString());
+
+            // Assert
+            var jsonResult = Assert.IsType<JsonResult>(result);
+            var data = jsonResult.Value;
+            var foundProp = data.GetType().GetProperty("found").GetValue(data);
+            Assert.True((bool)foundProp);
+        }
+
+        [Fact]
+        public async Task QuickUpdateQuantity_UpdatesStock_AndReturnsJson()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var product = new Product { Name = "P1", Brand = "B1", Price = 10, QuantityInStock = 100 };
+            context.Products.Add(product);
+            await context.SaveChangesAsync();
+
+            var controller = new AdminProductsController(context);
+
+            // Act
+            var result = await controller.QuickUpdateQuantity(product.Id, 10);
+
+            // Assert
+            var jsonResult = Assert.IsType<JsonResult>(result);
+            var updatedProduct = await context.Products.FindAsync(product.Id);
+            Assert.Equal(110, updatedProduct.QuantityInStock);
+        }
+
+        [Fact]
+        public async Task ProductExists_ReturnsTrue_WhenProductExists()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var product = new Product { Name = "P1", Brand = "B1", Price = 10, QuantityInStock = 100 };
+            context.Products.Add(product);
+            await context.SaveChangesAsync();
+
+            var controller = new AdminProductsController(context);
+
+            // Act
+            var method = typeof(AdminProductsController).GetMethod("ProductExists", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var exists = (bool)method.Invoke(controller, new object[] { product.Id });
+
+            // Assert
+            Assert.True(exists);
+        }
+
+        [Fact]
+        public async Task Edit_ReturnsNotFound_WhenIdMismatch()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var controller = new AdminProductsController(context);
+            var product = new Product { Id = 1, Name = "P1" };
+
+            // Act
+            var result = await controller.Edit(2, product);
+
+            // Assert
+            Assert.IsType<NotFoundResult>(result);
+        }
+
+        [Fact]
+        public async Task Delete_ReturnsNotFound_WhenIdNull()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var controller = new AdminProductsController(context);
+
+            // Act
+            var result = await controller.Delete(null);
+
+            // Assert
+            Assert.IsType<NotFoundResult>(result);
         }
     }
 }

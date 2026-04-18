@@ -21,7 +21,7 @@ namespace StockFlowPro.Controllers
         }
 
         // GET: AdminProducts
-        public async Task<IActionResult> Index(string? search, string? filter = "all", string? sortBy = "name", string? sortDir = "asc")
+        public async Task<IActionResult> Index(string? search = null, string? filter = "all", string? sortBy = "name", string? sortDir = "asc")
         {
             var query = _context.Products.AsQueryable();
 
