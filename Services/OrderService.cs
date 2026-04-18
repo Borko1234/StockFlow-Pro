@@ -83,6 +83,11 @@ namespace StockFlowPro.Services
             {
                 foreach (var item in order.OrderItems)
                 {
+                    if (item.Product != null)
+                    {
+                        item.Product.QuantityInStock -= item.Quantity;
+                        if (item.Product.QuantityInStock < 0) item.Product.QuantityInStock = 0;
+                    }
                 }
             }
 
