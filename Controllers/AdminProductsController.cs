@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StockFlowPro.Data;
 using StockFlowPro.Models;
+using StockFlowPro.ViewModels.Admin;
 
 namespace StockFlowPro.Controllers
 {
@@ -20,9 +21,78 @@ namespace StockFlowPro.Controllers
         }
 
         // GET: AdminProducts
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? search, string? filter = "all", string? sortBy = "name", string? sortDir = "asc")
         {
-            return View(await _context.Products.ToListAsync());
+            var query = _context.Products.AsQueryable();
+
+            // Search
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(p => p.Name.Contains(search) || p.Brand.Contains(search));
+            }
+
+            // Filter
+            if (filter == "low")
+            {
+                query = query.Where(p => p.QuantityInStock <= p.MinimumStockLevel);
+            }
+
+            // Sort
+            query = sortBy switch
+            {
+                "name" => sortDir == "asc" ? query.OrderBy(p => p.Name) : query.OrderByDescending(p => p.Name),
+                "stock" => sortDir == "asc" ? query.OrderBy(p => p.QuantityInStock) : query.OrderByDescending(p => p.QuantityInStock),
+                "price" => sortDir == "asc" ? query.OrderBy(p => p.Price) : query.OrderByDescending(p => p.Price),
+                _ => query.OrderBy(p => p.Name)
+            };
+
+            var model = new ProductListViewModel
+            {
+                Products = await query.ToListAsync(),
+                Search = search,
+                Filter = filter,
+                SortBy = sortBy,
+                SortDir = sortDir,
+                TotalCount = await _context.Products.CountAsync(),
+                LowStockCount = await _context.Products.CountAsync(p => p.QuantityInStock <= p.MinimumStockLevel)
+            };
+
+            return View(model);
+        }
+
+        // GET: AdminProducts/LookupByBarcode
+        [HttpGet]
+        public async Task<IActionResult> LookupByBarcode(string barcode)
+        {
+            var product = await _context.Products
+                .FirstOrDefaultAsync(p => p.Barcode == barcode);
+
+            if (product == null)
+                return Json(new { found = false });
+
+            return Json(new { 
+                found = true, 
+                id = product.Id, 
+                name = product.Name, 
+                quantity = product.QuantityInStock, 
+                barcode = product.Barcode 
+            });
+        }
+
+        // POST: AdminProducts/QuickUpdateQuantity
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> QuickUpdateQuantity(int id, int delta)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
+
+            product.QuantityInStock += delta;
+            if (product.QuantityInStock < 0) product.QuantityInStock = 0;
+            
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, newQuantity = product.QuantityInStock });
         }
 
         // GET: AdminProducts/Create

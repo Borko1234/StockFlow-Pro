@@ -37,22 +37,48 @@ namespace StockFlowPro.Controllers
             var user = await _userManager.GetUserAsync(User);
             var userName = user?.UserName ?? User.Identity.Name;
 
-            IQueryable<Order> ordersQuery = _context.Orders.Include(o => o.Facility);
+            // KPI Calculations
+            var totalProducts = await _context.Products.CountAsync();
+            var lowStockCount = await _context.Products.CountAsync(p => p.QuantityInStock < 10);
+            var facilityCount = await _context.Facilities.CountAsync(f => f.IsActive);
+            var activeOrdersCount = await _context.Orders.CountAsync(o => o.OrderStatus != Models.Enums.OrderStatus.Delivered);
 
-            // Office Workers see today's orders
-            if (User.IsInRole("OfficeWorker"))
+            // Recent Orders
+            var recentOrders = await _context.Orders
+                .Include(o => o.Facility)
+                .OrderByDescending(o => o.CreatedAt)
+                .Take(5)
+                .ToListAsync();
+
+            // Weekly Movement Data for Chart.js
+            var last7Days = Enumerable.Range(0, 7)
+                .Select(i => DateTime.Today.AddDays(-i))
+                .OrderBy(d => d)
+                .ToList();
+
+            var movements = await _context.Orders
+                .Where(o => o.CreatedAt >= last7Days.First())
+                .GroupBy(o => o.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var weeklyMovements = last7Days.Select(d => new MonthlyMovementDto
             {
-                var today = DateTime.Today;
-                ordersQuery = ordersQuery.Where(o => o.CreatedAt.Date == today);
-            }
-            // Admins see all orders
+                Day = d.ToString("ddd"),
+                OrdersCount = movements.FirstOrDefault(m => m.Date == d)?.Count ?? 0
+            }).ToList();
 
-            var orders = await ordersQuery.OrderByDescending(o => o.CreatedAt).ToListAsync();
-
-            var model = new HomeViewModel
+            var model = new DashboardViewModel
             {
                 UserName = userName,
-                Orders = orders
+                TotalProducts = totalProducts,
+                LowStockCount = lowStockCount,
+                FacilityCount = facilityCount,
+                ActiveOrdersCount = activeOrdersCount,
+                RecentOrders = recentOrders,
+                WeeklyMovements = weeklyMovements,
+                // Ensure office workers only see today's orders in the recent list if necessary
+                // but following the Dashboard requirement for overall KPIs
             };
 
             return View(model);

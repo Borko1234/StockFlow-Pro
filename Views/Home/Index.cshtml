@@ -1,43 +1,154 @@
-@model StockFlowPro.ViewModels.HomeViewModel
+@model StockFlowPro.ViewModels.DashboardViewModel
 
 @{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Табло";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome, @Model.UserName!</h1>
-    <p>All orders</p>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Добре дошли, @Model.UserName!</h1>
+        <span class="text-muted">@DateTime.Now.ToString("D")</span>
+    </div>
 
-    @if (Model.Orders != null && Model.Orders.Any())
-    {
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Order Id</th>
-                    <th>Facility Name</th>
-                    <th>Status</th>
-                    <th>Total Amount</th>
-                    <th>Created At</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var order in Model.Orders)
-                {
-                    <tr>
-                        <td>@order.Id</td>
-                        <td>@order.Facility?.Name</td>
-                        <td>@order.OrderStatus</td>
-                        <td>@order.TotalAmount.ToString("C")</td>
-                        <td>@order.CreatedAt.ToString("g")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-    else
-    {
-        <div class="alert alert-info">
-            No orders found.
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 bg-primary bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-box-seam text-primary fs-3"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-0">Общо продукти</h6>
+                            <h3 class="mb-0">@Model.TotalProducts</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    }
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100 @(Model.LowStockCount > 0 ? "border-start border-danger border-4" : "")">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 @(Model.LowStockCount > 0 ? "bg-danger" : "bg-warning") bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-exclamation-triangle @(Model.LowStockCount > 0 ? "text-danger" : "text-warning") fs-3"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-0">Нисък запас</h6>
+                            <h3 class="mb-0 @(Model.LowStockCount > 0 ? "text-danger" : "")">@Model.LowStockCount</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 bg-info bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-building text-info fs-3"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-0">Активни обекти</h6>
+                            <h3 class="mb-0">@Model.FacilityCount</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 bg-success bg-opacity-10 p-3 rounded">
+                            <i class="bi bi-cart-check text-success fs-3"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="text-muted mb-0">Активни поръчки</h6>
+                            <h3 class="mb-0">@Model.ActiveOrdersCount</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Weekly Chart -->
+        <div class="col-lg-8 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-3">
+                    <h5 class="card-title">Движение на поръчки (Последни 7 дни)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="movementChart" style="min-height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-3">
+                    <h5 class="card-title">Последни поръчки</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        @foreach (var order in Model.RecentOrders)
+                        {
+                            <div class="list-group-item border-0 border-bottom">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">#@order.Id - @order.Facility?.Name</h6>
+                                    <small class="text-muted">@order.CreatedAt.ToString("HH:mm")</small>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge @(order.OrderStatus == StockFlowPro.Models.Enums.OrderStatus.Delivered ? "bg-success" : "bg-info")">@order.OrderStatus</span>
+                                    <span class="fw-bold">@order.TotalAmount.ToString("C")</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('movementChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: @Html.Raw(Json.Serialize(Model.WeeklyMovements.Select(m => m.Day))),
+                datasets: [{
+                    label: 'Брой поръчки',
+                    data: @Html.Raw(Json.Serialize(Model.WeeklyMovements.Select(m => m.OrdersCount))),
+                    backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                    borderColor: 'rgb(13, 110, 253)',
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    </script>
+}

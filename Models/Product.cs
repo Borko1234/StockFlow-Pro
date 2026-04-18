@@ -19,6 +19,7 @@ namespace StockFlowPro.Models
         
         public int QuantityInStock { get; set; }
         public int MinimumStockLevel { get; set; }
+        public string? Barcode { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }

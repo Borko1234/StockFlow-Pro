@@ -12,6 +12,35 @@
 
     <!-- Stats Cards -->
     <div class="row">
+        <!-- Low Stock Alert -->
+        @if (Model.LowStockProducts.Any())
+        {
+            <div class="col-12 mb-4">
+                <div class="card border-left-danger shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                    Low Stock Alerts (@Model.LowStockProducts.Count Items)
+                                </div>
+                                <div class="row">
+                                    @foreach (var p in Model.LowStockProducts.Take(5))
+                                    {
+                                        <div class="col-md-4 mb-1">
+                                            <span class="badge bg-danger">@p.QuantityInStock left</span> @p.Name
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <a asp-controller="AdminProducts" asp-action="Index" class="btn btn-sm btn-outline-danger">Manage Stock</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-primary shadow h-100 py-2">
                 <div class="card-body">

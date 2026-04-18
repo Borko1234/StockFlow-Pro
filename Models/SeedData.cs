@@ -47,8 +47,8 @@ namespace StockFlowPro.Models
             if (context.Facilities.Count() != 30) throw new Exception("Expected exactly 30 facilities.");
             if (context.Orders.Count() != 30) throw new Exception("Expected exactly 30 orders.");
             if (!context.Products.Any(p => p.QuantityInStock == 0)) throw new Exception("Missing zero-stock product example.");
-            if (context.Orders.Count(o => o.OrderStatus == OrderStatus.Pending) == 0) throw new Exception("Missing Pending orders.");
-            if (context.Orders.Count(o => o.OrderStatus == OrderStatus.Scanned) == 0) throw new Exception("Missing Scanned orders.");
+            if (context.Orders.Count(o => o.OrderStatus == OrderStatus.Created) == 0) throw new Exception("Missing Created orders.");
+            if (context.Orders.Count(o => o.OrderStatus == OrderStatus.Created) == 0) throw new Exception("Missing Created orders.");
             if (context.Orders.Count(o => o.OrderStatus == OrderStatus.Delivered) == 0) throw new Exception("Missing Delivered orders.");
             if (!context.Orders.Any(o => o.OrderItems.Count > 1)) throw new Exception("Missing multi-line order example.");
         }
@@ -206,7 +206,7 @@ namespace StockFlowPro.Models
             {
                 var status = (n % 4) switch
                 {
-                    1 => OrderStatus.Pending,
+                    1 => OrderStatus.Created,
                     2 => OrderStatus.Scanned,
                     3 => OrderStatus.Scanned, // Mapping multiple to Scanned as Pending->Scanned->Delivered
                     _ => OrderStatus.Delivered

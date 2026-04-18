@@ -25,6 +25,11 @@ namespace StockFlowPro.Controllers
             var totalOrders = await _context.Orders.CountAsync();
             var pendingOrders = await _context.Orders.CountAsync(o => o.OrderStatus == OrderStatus.Created);
             
+            var lowStockProducts = await _context.Products
+                .Where(p => p.QuantityInStock <= p.MinimumStockLevel)
+                .OrderBy(p => p.QuantityInStock)
+                .ToListAsync();
+
             var totalRevenue = await _context.Orders
                 .Where(o => o.OrderStatus == OrderStatus.Delivered)
                 .SumAsync(o => o.TotalAmount);
@@ -112,6 +117,7 @@ namespace StockFlowPro.Controllers
                 TotalOrders = totalOrders,
                 PendingOrders = pendingOrders,
                 TotalRevenue = totalRevenue,
+                LowStockProducts = lowStockProducts,
                 TopProducts = topProducts,
                 MonthlyProfits = monthlyProfits
             };

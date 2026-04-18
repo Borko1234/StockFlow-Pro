@@ -10,6 +10,7 @@ namespace StockFlowPro.ViewModels.Admin
         public int TotalOrders { get; set; }
         public decimal TotalRevenue { get; set; } 
         public int PendingOrders { get; set; }
+        public List<StockFlowPro.Models.Product> LowStockProducts { get; set; } = new List<StockFlowPro.Models.Product>();
         public List<ProductPerformanceDto> TopProducts { get; set; } = new List<ProductPerformanceDto>();
         public List<MonthlyProfitDto> MonthlyProfits { get; set; } = new List<MonthlyProfitDto>();
     }
@@ -37,5 +38,16 @@ namespace StockFlowPro.ViewModels.Admin
         public DateTime? EndDate { get; set; }
         public OrderStatus? Status { get; set; }
         public int? FacilityId { get; set; }
+    }
+
+    public class ProductListViewModel
+    {
+        public List<StockFlowPro.Models.Product> Products { get; set; } = new List<StockFlowPro.Models.Product>();
+        public string? Search { get; set; }
+        public string? Filter { get; set; } // "all" | "low"
+        public string? SortBy { get; set; }
+        public string? SortDir { get; set; }
+        public int TotalCount { get; set; }
+        public int LowStockCount { get; set; }
     }
 }
