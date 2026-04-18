@@ -58,16 +58,17 @@
                                     </div>
                                     <div class="mt-3">
                                         <div class="d-flex flex-wrap gap-2">
-                                            <button type="button" class="btn btn-outline-primary" id="startCameraScanButton">Start Camera Scan</button>
+                                            <button type="button" class="btn btn-outline-secondary" id="showCameraOptionsButton">Choose Camera</button>
+                                            <button type="button" class="btn btn-outline-primary" id="startCameraScanButton" disabled>Start Camera Scan</button>
                                             <button type="button" class="btn btn-outline-secondary" id="stopCameraScanButton" disabled>Stop Camera</button>
                                         </div>
                                         <div class="form-text mt-2">
-                                            Click `Start Camera Scan` and allow camera access when your browser asks.
+                                            Choose a camera first, then click `Start Camera Scan` and allow camera access when your browser asks.
                                         </div>
                                         <div class="mt-3 d-none" id="cameraScannerPanel">
                                             <label for="cameraSourceSelect" class="form-label">Camera Source</label>
                                             <select id="cameraSourceSelect" class="form-select mb-3"></select>
-                                            <video id="cameraPreview" class="w-100 rounded border bg-dark" style="max-height: 320px;" playsinline muted></video>
+                                            <video id="cameraPreview" class="w-100 rounded border bg-dark d-none" style="max-height: 320px;" playsinline muted></video>
                                             <div id="cameraScannerStatus" class="form-text mt-2"></div>
                                         </div>
                                     </div>
@@ -152,6 +153,7 @@
         const scanProductForm = document.getElementById("scanProductForm");
         const orderIdInput = document.getElementById("orderIdInput");
         const productIdInput = document.getElementById("productIdInput");
+        const showCameraOptionsButton = document.getElementById("showCameraOptionsButton");
         const startCameraScanButton = document.getElementById("startCameraScanButton");
         const stopCameraScanButton = document.getElementById("stopCameraScanButton");
         const cameraScannerPanel = document.getElementById("cameraScannerPanel");
@@ -162,11 +164,9 @@
         let cameraCodeReader = null;
         let cameraScannerControls = null;
         let selectedCameraId = localStorage.getItem("scanner.selectedCameraId");
-        const cameraPreferenceKey = "scanner.cameraEnabled";
-        const cameraAutoRestartKey = "scanner.autoRestartAfterScan";
+        const cameraPanelPreferenceKey = "scanner.cameraPanelVisible";
         const shouldShowSuccessPopup = @Json.Serialize(Model.CurrentOrder != null && !string.IsNullOrEmpty(Model.SuccessMessage));
-        const shouldAutoRestartCamera = localStorage.getItem(cameraPreferenceKey) === "true"
-            && sessionStorage.getItem(cameraAutoRestartKey) === "true"
+        const shouldRestoreCameraPanel = localStorage.getItem(cameraPanelPreferenceKey) === "true"
             && @Json.Serialize(Model.CurrentOrder != null && !Model.AllItemsScanned);
 
         const setCameraStatus = (message) => {
@@ -176,7 +176,7 @@
             }
         };
 
-        const saveCameraPreferences = (cameraEnabled) => {
+        const saveCameraPreferences = (cameraPanelVisible) => {
             if (selectedCameraId)
             {
                 localStorage.setItem("scanner.selectedCameraId", selectedCameraId);
@@ -186,7 +186,23 @@
                 localStorage.removeItem("scanner.selectedCameraId");
             }
 
-            localStorage.setItem(cameraPreferenceKey, cameraEnabled ? "true" : "false");
+            localStorage.setItem(cameraPanelPreferenceKey, cameraPanelVisible ? "true" : "false");
+        };
+
+        const setCameraPanelVisibility = (isVisible) => {
+            if (!cameraScannerPanel) return;
+
+            cameraScannerPanel.classList.toggle("d-none", !isVisible);
+            if (!isVisible && cameraPreview)
+            {
+                cameraPreview.classList.add("d-none");
+            }
+            saveCameraPreferences(isVisible);
+        };
+
+        const updateStartButtonState = () => {
+            if (!startCameraScanButton) return;
+            startCameraScanButton.disabled = !selectedCameraId;
         };
 
         const updateMarkButtonState = () => {
@@ -228,6 +244,10 @@
                 cameraPreview.srcObject = null;
             }
 
+            if (cameraPreview)
+            {
+                cameraPreview.classList.add("d-none");
+            }
             if (startCameraScanButton)
             {
                 startCameraScanButton.disabled = false;
@@ -242,8 +262,7 @@
             }
             if (clearPreferences)
             {
-                saveCameraPreferences(false);
-                sessionStorage.removeItem(cameraAutoRestartKey);
+                setCameraPanelVisibility(false);
             }
         };
 
@@ -309,7 +328,8 @@
                 ? selectedCameraId
                 : getPreferredCameraId(devices);
             cameraSourceSelect.value = selectedCameraId;
-            saveCameraPreferences(localStorage.getItem(cameraPreferenceKey) === "true");
+            saveCameraPreferences(localStorage.getItem(cameraPanelPreferenceKey) === "true");
+            updateStartButtonState();
         };
 
         const buildCameraConstraints = () => {
@@ -352,8 +372,6 @@
                                 const scannedValue = result.getText().trim();
                                 productIdInput.value = scannedValue;
                                 setCameraStatus(`Scanned value: ${scannedValue}`);
-                                saveCameraPreferences(true);
-                                sessionStorage.setItem(cameraAutoRestartKey, "true");
                                 stopCameraScanner();
                                 scanProductForm.requestSubmit();
                                 return;
@@ -386,14 +404,15 @@
                 return;
             }
 
-            cameraScannerPanel.classList.remove("d-none");
-
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
             {
-                if (cameraScannerStatus)
-                {
-                    cameraScannerStatus.textContent = "Camera access is not supported in this browser.";
-                }
+                setCameraStatus("Camera access is not supported in this browser.");
+                return;
+            }
+
+            if (!selectedCameraId)
+            {
+                setCameraStatus("Choose a camera before starting the scanner.");
                 return;
             }
 
@@ -410,18 +429,12 @@
                     cameraCodeReader = new BrowserMultiFormatReader();
                 }
 
-                await loadCameraDevices();
-                if (!selectedCameraId)
-                {
-                    if (cameraScannerStatus)
-                    {
-                        cameraScannerStatus.textContent = "No camera was found on this device.";
-                    }
-                    return;
-                }
-
                 stopCameraScanner();
-                cameraScannerPanel.classList.remove("d-none");
+                setCameraPanelVisibility(true);
+                if (cameraPreview)
+                {
+                    cameraPreview.classList.remove("d-none");
+                }
                 setCameraStatus("Starting camera. Point it at a product code.");
                 if (startCameraScanButton)
                 {
@@ -433,12 +446,37 @@
                 }
 
                 await startDecoding();
-                saveCameraPreferences(true);
             }
             catch (error)
             {
-                stopCameraScanner(false, true);
+                stopCameraScanner();
                 setCameraStatus(`Unable to start camera scanner: ${error?.message || error}`);
+            }
+        };
+
+        const showCameraOptions = async () => {
+            if (!cameraScannerPanel)
+            {
+                return;
+            }
+
+            setCameraPanelVisibility(true);
+            setCameraStatus("Loading available cameras...");
+
+            try
+            {
+                await loadCameraDevices();
+                if (!selectedCameraId)
+                {
+                    setCameraStatus("No camera was found on this device.");
+                    return;
+                }
+
+                setCameraStatus("Choose a camera, then click Start Camera Scan.");
+            }
+            catch (error)
+            {
+                setCameraStatus(`Unable to load cameras: ${error?.message || error}`);
             }
         };
 
@@ -446,8 +484,14 @@
         {
             cameraSourceSelect.addEventListener("change", () => {
                 selectedCameraId = cameraSourceSelect.value || null;
-                saveCameraPreferences(localStorage.getItem(cameraPreferenceKey) === "true");
+                saveCameraPreferences(localStorage.getItem(cameraPanelPreferenceKey) === "true");
+                updateStartButtonState();
             });
+        }
+
+        if (showCameraOptionsButton)
+        {
+            showCameraOptionsButton.addEventListener("click", showCameraOptions);
         }
 
         if (startCameraScanButton)
@@ -465,11 +509,10 @@
             new bootstrap.Toast(scanSuccessToast, { delay: 1800 }).show();
         }
 
-        if (shouldAutoRestartCamera)
+        if (shouldRestoreCameraPanel)
         {
-            sessionStorage.removeItem(cameraAutoRestartKey);
             window.setTimeout(() => {
-                startCameraScanner();
+                showCameraOptions();
             }, 300);
         }
 
