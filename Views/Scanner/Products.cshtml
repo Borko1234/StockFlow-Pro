@@ -19,8 +19,8 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label for="barcodeInput" class="form-label">Barcode / Product ID</label>
-                        <input type="text" class="form-control" id="barcodeInput" autofocus placeholder="Scan barcode...">
+                        <label for="productIdInput" class="form-label">Product ID</label>
+                        <input type="text" class="form-control" id="productIdInput" autofocus placeholder="Enter product ID...">
                     </div>
                     <button type="button" id="scanBtn" class="btn btn-success w-100">Scan</button>
                     
@@ -70,34 +70,33 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            // Focus on barcode input
-            $('#barcodeInput').focus();
+            $('#productIdInput').focus();
 
             // Handle Scan
             $('#scanBtn').click(function () {
                 scanProduct();
             });
 
-            $('#barcodeInput').keypress(function (e) {
+            $('#productIdInput').keypress(function (e) {
                 if (e.which == 13) {
                     scanProduct();
                 }
             });
 
             function scanProduct() {
-                var barcode = $('#barcodeInput').val();
+                var productId = $('#productIdInput').val();
                 var orderId = @Model.CurrentOrder.Id;
 
-                if (!barcode) return;
+                if (!productId) return;
 
-                $.post('@Url.Action("ScanItem", "Scanner")', { orderId: orderId, barcode: barcode }, function (data) {
+                $.post('@Url.Action("ScanItem", "Scanner")', { orderId: orderId, productId: productId }, function (data) {
                     if (data.success) {
                         $('#scanResult').html('<div class="alert alert-success">Scanned: ' + data.productName + '</div>');
                         
                         // Update UI
                         // Find row by product name or ID logic (simple name match for now)
                         var row = $('#productsTable tbody tr').filter(function() {
-                            return $(this).data('product-name') == data.productName || $(this).data('product-id') == barcode;
+                            return $(this).data('product-name') == data.productName || $(this).data('product-id') == productId;
                         });
 
                         if (row.length > 0) {
@@ -105,10 +104,10 @@
                             row.addClass('table-success');
                         }
 
-                        $('#barcodeInput').val('').focus();
+                        $('#productIdInput').val('').focus();
                     } else {
                         $('#scanResult').html('<div class="alert alert-danger">' + data.message + '</div>');
-                        $('#barcodeInput').val('').focus();
+                        $('#productIdInput').val('').focus();
                     }
                 });
             }

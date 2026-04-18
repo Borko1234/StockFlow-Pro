@@ -9,9 +9,6 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="h3 mb-0">Списък с продукти</h2>
         <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#barcodeScannerModal">
-                <i class="bi bi-qr-code-scan"></i> Сканирай
-            </button>
             <a asp-action="Create" class="btn btn-primary">
                 <i class="bi bi-plus-lg"></i> Нов продукт
             </a>
@@ -86,10 +83,7 @@
                             <tr>
                                 <td>
                                     <div class="fw-bold">@item.Name</div>
-                                    @if (!string.IsNullOrEmpty(item.Barcode))
-                                    {
-                                        <small class="text-muted"><i class="bi bi-barcode"></i> @item.Barcode</small>
-                                    }
+                                    <small class="text-muted">ID: @item.Id</small>
                                 </td>
                                 <td>@item.Brand</td>
                                 <td>
@@ -126,4 +120,3 @@
     </div>
 </div>
 
-@await Html.PartialAsync("_BarcodeScannerModal")

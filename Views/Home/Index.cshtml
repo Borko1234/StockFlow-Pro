@@ -10,6 +10,41 @@
         <span class="text-muted">@DateTime.Now.ToString("D")</span>
     </div>
 
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 pt-3">
+                    <h5 class="card-title mb-0">Бързи действия</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <a asp-controller="Admin" asp-action="Index" class="btn btn-primary">Admin Dashboard</a>
+                            <a asp-controller="AdminOrders" asp-action="Index" class="btn btn-outline-primary">Manage Orders</a>
+                            <a asp-controller="AdminProducts" asp-action="Index" class="btn btn-outline-success">Manage Products</a>
+                            <a asp-controller="AdminEmployees" asp-action="Index" class="btn btn-outline-secondary">Manage Employees</a>
+                            <a asp-controller="AdminFacilities" asp-action="Index" class="btn btn-outline-warning">Manage Facilities</a>
+                        }
+                        else if (User.IsInRole("OfficeWorker"))
+                        {
+                            <a asp-controller="Order" asp-action="Create" class="btn btn-primary">Create Order</a>
+                            <a asp-controller="AdminOrders" asp-action="Index" class="btn btn-outline-primary">View Orders</a>
+                        }
+                        else if (User.IsInRole("Scanner"))
+                        {
+                            <a asp-controller="Scanner" asp-action="Index" class="btn btn-primary">Scanner Station</a>
+                        }
+                        else if (User.IsInRole("Packer"))
+                        {
+                            <a asp-controller="Packer" asp-action="Index" class="btn btn-primary">Packer Dashboard</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- KPI Cards -->
     <div class="row mb-4">
         <div class="col-md-3 mb-3">

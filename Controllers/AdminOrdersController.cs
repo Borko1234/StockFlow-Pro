@@ -12,7 +12,7 @@ using StockFlowPro.ViewModels.Admin;
 
 namespace StockFlowPro.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,OfficeWorker")]
     public class AdminOrdersController : Controller
     {
         private readonly FoodieDbContext _context;
@@ -98,13 +98,6 @@ namespace StockFlowPro.Controllers
             if (order == null) return NotFound();
 
             if (newStatus == OrderStatus.Delivered && order.OrderStatus != OrderStatus.Scanned && order.OrderStatus != OrderStatus.Delivered)
-            {
-                order.OrderStatus = OrderStatus.Delivered;
-                await _context.SaveChangesAsync();
-            }
-
-            return RedirectToAction(nameof(Index));
-        }
             {
                 return RedirectToAction(nameof(Index));
             }

@@ -6,6 +6,16 @@
 }
 
 <div class="container mt-5">
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="scanSuccessToast" class="toast text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    Scan successful!
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card shadow">
@@ -18,11 +28,11 @@
                             <span class="input-group-text" id="scan-icon">Order ID</span>
                             @if (Model.CurrentOrder == null)
                             {
-                                <input type="number" id="orderIdInput" name="orderId" class="form-control" placeholder="Scan or Enter Order ID..." aria-label="Order ID" aria-describedby="scan-icon" required>
+                                <input type="number" id="orderIdInput" name="orderId" class="form-control" placeholder="Enter Order ID..." aria-label="Order ID" aria-describedby="scan-icon" required>
                             }
                             else
                             {
-                                <input type="number" id="orderIdInput" name="orderId" class="form-control" placeholder="Scan or Enter Order ID..." aria-label="Order ID" aria-describedby="scan-icon" required>
+                                <input type="number" id="orderIdInput" name="orderId" class="form-control" placeholder="Enter Order ID..." aria-label="Order ID" aria-describedby="scan-icon" required>
                             }
                             <button class="btn btn-success" type="submit">Scan Order</button>
                         </div>
@@ -43,8 +53,23 @@
                                     <input type="hidden" name="remainingProductIds" value="@Model.RemainingProductIdsCsv" />
                                     <div class="input-group input-group-lg">
                                         <span class="input-group-text" id="product-scan-icon">Product ID</span>
-                                        <input type="number" id="productIdInput" name="productId" class="form-control" placeholder="Scan or Enter Product ID..." aria-label="Product ID" aria-describedby="product-scan-icon" required>
+                                        <input type="number" id="productIdInput" name="productId" class="form-control" placeholder="Enter Product ID..." aria-label="Product ID" aria-describedby="product-scan-icon" required>
                                         <button class="btn btn-primary" type="submit">Scan Product</button>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <button type="button" class="btn btn-outline-primary" id="startCameraScanButton">Start Camera Scan</button>
+                                            <button type="button" class="btn btn-outline-secondary" id="stopCameraScanButton" disabled>Stop Camera</button>
+                                        </div>
+                                        <div class="form-text mt-2">
+                                            Click `Start Camera Scan` and allow camera access when your browser asks.
+                                        </div>
+                                        <div class="mt-3 d-none" id="cameraScannerPanel">
+                                            <label for="cameraSourceSelect" class="form-label">Camera Source</label>
+                                            <select id="cameraSourceSelect" class="form-select mb-3"></select>
+                                            <video id="cameraPreview" class="w-100 rounded border bg-dark" style="max-height: 320px;" playsinline muted></video>
+                                            <div id="cameraScannerStatus" class="form-text mt-2"></div>
+                                        </div>
                                     </div>
                                     <div class="mt-3">
                                         <label class="form-label">Prepared By (Packer)</label>
@@ -118,13 +143,51 @@
 </div>
 
 @section Scripts {
-    <script>
+    <script type="module">
+        import { BrowserCodeReader, BrowserMultiFormatReader } from "https://esm.sh/%40zxing/browser";
+
         const packerSelect = document.getElementById("packerSelect");
         const markButton = document.getElementById("markOrderScannedButton");
         const packerHidden = document.getElementById("selectedPackerIdInput");
         const scanProductForm = document.getElementById("scanProductForm");
         const orderIdInput = document.getElementById("orderIdInput");
         const productIdInput = document.getElementById("productIdInput");
+        const startCameraScanButton = document.getElementById("startCameraScanButton");
+        const stopCameraScanButton = document.getElementById("stopCameraScanButton");
+        const cameraScannerPanel = document.getElementById("cameraScannerPanel");
+        const cameraSourceSelect = document.getElementById("cameraSourceSelect");
+        const cameraPreview = document.getElementById("cameraPreview");
+        const cameraScannerStatus = document.getElementById("cameraScannerStatus");
+        const scanSuccessToast = document.getElementById("scanSuccessToast");
+        let cameraCodeReader = null;
+        let cameraScannerControls = null;
+        let selectedCameraId = localStorage.getItem("scanner.selectedCameraId");
+        const cameraPreferenceKey = "scanner.cameraEnabled";
+        const cameraAutoRestartKey = "scanner.autoRestartAfterScan";
+        const shouldShowSuccessPopup = @Json.Serialize(Model.CurrentOrder != null && !string.IsNullOrEmpty(Model.SuccessMessage));
+        const shouldAutoRestartCamera = localStorage.getItem(cameraPreferenceKey) === "true"
+            && sessionStorage.getItem(cameraAutoRestartKey) === "true"
+            && @Json.Serialize(Model.CurrentOrder != null && !Model.AllItemsScanned);
+
+        const setCameraStatus = (message) => {
+            if (cameraScannerStatus)
+            {
+                cameraScannerStatus.textContent = message;
+            }
+        };
+
+        const saveCameraPreferences = (cameraEnabled) => {
+            if (selectedCameraId)
+            {
+                localStorage.setItem("scanner.selectedCameraId", selectedCameraId);
+            }
+            else
+            {
+                localStorage.removeItem("scanner.selectedCameraId");
+            }
+
+            localStorage.setItem(cameraPreferenceKey, cameraEnabled ? "true" : "false");
+        };
 
         const updateMarkButtonState = () => {
             if (!markButton) return;
@@ -151,5 +214,265 @@
         {
             orderIdInput.focus({ preventScroll: true });
         }
+
+        const stopCameraScanner = (clearStatus = false, clearPreferences = false) => {
+            if (cameraScannerControls)
+            {
+                cameraScannerControls.stop();
+                cameraScannerControls = null;
+            }
+
+            if (cameraPreview && cameraPreview.srcObject)
+            {
+                cameraPreview.srcObject.getTracks().forEach(track => track.stop());
+                cameraPreview.srcObject = null;
+            }
+
+            if (startCameraScanButton)
+            {
+                startCameraScanButton.disabled = false;
+            }
+            if (stopCameraScanButton)
+            {
+                stopCameraScanButton.disabled = true;
+            }
+            if (clearStatus)
+            {
+                setCameraStatus("");
+            }
+            if (clearPreferences)
+            {
+                saveCameraPreferences(false);
+                sessionStorage.removeItem(cameraAutoRestartKey);
+            }
+        };
+
+        const stopMediaStream = (stream) => {
+            if (stream)
+            {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        };
+
+        const ensureCameraPermission = async () => {
+            setCameraStatus("Allow camera access in the browser prompt to continue.");
+            try
+            {
+                const permissionStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: "environment" } },
+                    audio: false
+                });
+                stopMediaStream(permissionStream);
+                return true;
+            }
+            catch (error)
+            {
+                setCameraStatus(`Camera permission failed: ${error?.message || error}`);
+                return false;
+            }
+        };
+
+        const getPreferredCameraId = (devices) => {
+            if (!devices.length)
+            {
+                return null;
+            }
+
+            const preferredDevice = devices.find(device => {
+                const label = (device.label || "").toLowerCase();
+                return label.includes("back") || label.includes("rear") || label.includes("environment");
+            });
+
+            return (preferredDevice || devices[0]).deviceId;
+        };
+
+        const loadCameraDevices = async () => {
+            if (!cameraSourceSelect) return;
+
+            const devices = await BrowserCodeReader.listVideoInputDevices();
+            cameraSourceSelect.innerHTML = "";
+
+            if (!devices.length)
+            {
+                selectedCameraId = null;
+                return;
+            }
+
+            devices.forEach(device => {
+                const option = document.createElement("option");
+                option.value = device.deviceId;
+                option.textContent = device.label || `Camera ${cameraSourceSelect.options.length + 1}`;
+                cameraSourceSelect.appendChild(option);
+            });
+
+            selectedCameraId = selectedCameraId && devices.some(device => device.deviceId === selectedCameraId)
+                ? selectedCameraId
+                : getPreferredCameraId(devices);
+            cameraSourceSelect.value = selectedCameraId;
+            saveCameraPreferences(localStorage.getItem(cameraPreferenceKey) === "true");
+        };
+
+        const buildCameraConstraints = () => {
+            const constraints = [];
+
+            if (selectedCameraId)
+            {
+                constraints.push({ video: { deviceId: { exact: selectedCameraId } }, audio: false });
+            }
+
+            constraints.push({ video: { facingMode: { ideal: "environment" } }, audio: false });
+            constraints.push({ video: true, audio: false });
+
+            return constraints;
+        };
+
+        const shouldTryNextConstraint = (error) => {
+            const message = `${error?.name || ""} ${error?.message || error || ""}`.toLowerCase();
+            return message.includes("could not start video source")
+                || message.includes("notreadable")
+                || message.includes("overconstrained")
+                || message.includes("notfound")
+                || message.includes("devicesnotfound");
+        };
+
+        const startDecoding = async () => {
+            const constraintsOptions = buildCameraConstraints();
+            let lastError = null;
+
+            for (const constraints of constraintsOptions)
+            {
+                try
+                {
+                    cameraScannerControls = await cameraCodeReader.decodeFromConstraints(
+                        constraints,
+                        cameraPreview,
+                        (result, error) => {
+                            if (result)
+                            {
+                                const scannedValue = result.getText().trim();
+                                productIdInput.value = scannedValue;
+                                setCameraStatus(`Scanned value: ${scannedValue}`);
+                                saveCameraPreferences(true);
+                                sessionStorage.setItem(cameraAutoRestartKey, "true");
+                                stopCameraScanner();
+                                scanProductForm.requestSubmit();
+                                return;
+                            }
+
+                            if (error && error.name !== "NotFoundException")
+                            {
+                                setCameraStatus(`Scanner error: ${error.message || error}`);
+                            }
+                        });
+
+                    return;
+                }
+                catch (error)
+                {
+                    lastError = error;
+                    if (!shouldTryNextConstraint(error))
+                    {
+                        throw error;
+                    }
+                }
+            }
+
+            throw lastError || new Error("No camera configuration could be started.");
+        };
+
+        const startCameraScanner = async () => {
+            if (!productIdInput || !scanProductForm || !cameraPreview || !cameraScannerPanel)
+            {
+                return;
+            }
+
+            cameraScannerPanel.classList.remove("d-none");
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+            {
+                if (cameraScannerStatus)
+                {
+                    cameraScannerStatus.textContent = "Camera access is not supported in this browser.";
+                }
+                return;
+            }
+
+            try
+            {
+                const permissionGranted = await ensureCameraPermission();
+                if (!permissionGranted)
+                {
+                    return;
+                }
+
+                if (!cameraCodeReader)
+                {
+                    cameraCodeReader = new BrowserMultiFormatReader();
+                }
+
+                await loadCameraDevices();
+                if (!selectedCameraId)
+                {
+                    if (cameraScannerStatus)
+                    {
+                        cameraScannerStatus.textContent = "No camera was found on this device.";
+                    }
+                    return;
+                }
+
+                stopCameraScanner();
+                cameraScannerPanel.classList.remove("d-none");
+                setCameraStatus("Starting camera. Point it at a product code.");
+                if (startCameraScanButton)
+                {
+                    startCameraScanButton.disabled = true;
+                }
+                if (stopCameraScanButton)
+                {
+                    stopCameraScanButton.disabled = false;
+                }
+
+                await startDecoding();
+                saveCameraPreferences(true);
+            }
+            catch (error)
+            {
+                stopCameraScanner(false, true);
+                setCameraStatus(`Unable to start camera scanner: ${error?.message || error}`);
+            }
+        };
+
+        if (cameraSourceSelect)
+        {
+            cameraSourceSelect.addEventListener("change", () => {
+                selectedCameraId = cameraSourceSelect.value || null;
+                saveCameraPreferences(localStorage.getItem(cameraPreferenceKey) === "true");
+            });
+        }
+
+        if (startCameraScanButton)
+        {
+            startCameraScanButton.addEventListener("click", startCameraScanner);
+        }
+
+        if (stopCameraScanButton)
+        {
+            stopCameraScanButton.addEventListener("click", () => stopCameraScanner(true, true));
+        }
+
+        if (shouldShowSuccessPopup && scanSuccessToast && typeof bootstrap !== "undefined")
+        {
+            new bootstrap.Toast(scanSuccessToast, { delay: 1800 }).show();
+        }
+
+        if (shouldAutoRestartCamera)
+        {
+            sessionStorage.removeItem(cameraAutoRestartKey);
+            window.setTimeout(() => {
+                startCameraScanner();
+            }, 300);
+        }
+
+        window.addEventListener("beforeunload", () => stopCameraScanner());
     </script>
 }

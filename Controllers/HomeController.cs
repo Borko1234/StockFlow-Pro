@@ -25,32 +25,20 @@ namespace StockFlowPro.Controllers
 
         public async Task<IActionResult> Index()
         {
-            if (User.IsInRole("Scanner"))
-            {
-                return RedirectToAction("Index", "Scanner");
-            }
-            if (User.IsInRole("Packer"))
-            {
-                return RedirectToAction("Index", "Packer");
-            }
-
             var user = await _userManager.GetUserAsync(User);
             var userName = user?.UserName ?? User.Identity.Name;
 
-            // KPI Calculations
             var totalProducts = await _context.Products.CountAsync();
             var lowStockCount = await _context.Products.CountAsync(p => p.QuantityInStock < 10);
             var facilityCount = await _context.Facilities.CountAsync(f => f.IsActive);
             var activeOrdersCount = await _context.Orders.CountAsync(o => o.OrderStatus != Models.Enums.OrderStatus.Delivered);
 
-            // Recent Orders
             var recentOrders = await _context.Orders
                 .Include(o => o.Facility)
                 .OrderByDescending(o => o.CreatedAt)
                 .Take(5)
                 .ToListAsync();
 
-            // Weekly Movement Data for Chart.js
             var last7Days = Enumerable.Range(0, 7)
                 .Select(i => DateTime.Today.AddDays(-i))
                 .OrderBy(d => d)
@@ -76,9 +64,7 @@ namespace StockFlowPro.Controllers
                 FacilityCount = facilityCount,
                 ActiveOrdersCount = activeOrdersCount,
                 RecentOrders = recentOrders,
-                WeeklyMovements = weeklyMovements,
-                // Ensure office workers only see today's orders in the recent list if necessary
-                // but following the Dashboard requirement for overall KPIs
+                WeeklyMovements = weeklyMovements
             };
 
             return View(model);

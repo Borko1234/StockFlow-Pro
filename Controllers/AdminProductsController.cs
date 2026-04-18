@@ -60,12 +60,14 @@ namespace StockFlowPro.Controllers
             return View(model);
         }
 
-        // GET: AdminProducts/LookupByBarcode
         [HttpGet]
-        public async Task<IActionResult> LookupByBarcode(string barcode)
+        public async Task<IActionResult> LookupByProductId(string productId)
         {
+            if (!int.TryParse(productId, out var id))
+                return Json(new { found = false });
+
             var product = await _context.Products
-                .FirstOrDefaultAsync(p => p.Barcode == barcode);
+                .FirstOrDefaultAsync(p => p.Id == id);
 
             if (product == null)
                 return Json(new { found = false });
@@ -74,8 +76,7 @@ namespace StockFlowPro.Controllers
                 found = true, 
                 id = product.Id, 
                 name = product.Name, 
-                quantity = product.QuantityInStock, 
-                barcode = product.Barcode 
+                quantity = product.QuantityInStock
             });
         }
 

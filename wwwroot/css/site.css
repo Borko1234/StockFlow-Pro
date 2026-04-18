@@ -22,6 +22,42 @@ body {
   background-color: #f8f9fa;
 }
 
+.navbar > .container-fluid {
+  align-items: center;
+}
+
+.navbar-brand,
+.navbar-nav .nav-link,
+.navbar-nav .nav-item,
+.navbar-nav .nav-item form {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-nav .nav-link,
+.navbar-brand {
+  min-height: 40px;
+}
+
+.navbar-nav .btn.btn-link.nav-link {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.navbar-nav .nav-item {
+  min-height: 40px;
+}
+
+.navbar-nav .nav-item form {
+  margin: 0;
+  min-height: 40px;
+}
+
+.navbar-nav .nav-item form .nav-link {
+  height: 100%;
+  line-height: 1.5;
+}
+
 /* Sidebar Styles */
 #sidebar {
     min-width: 240px;
