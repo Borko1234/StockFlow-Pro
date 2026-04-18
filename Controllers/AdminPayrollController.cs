@@ -33,7 +33,7 @@ namespace StockFlowPro.Controllers
                 .GroupBy(op => op.PreparedByEmployeeId)
                 .Select(g => new 
                 {
-                    EmployeeId = g.Key.Value,
+                    EmployeeId = g.Key ?? 0,
                     Count = g.Count()
                 })
                 .ToListAsync();

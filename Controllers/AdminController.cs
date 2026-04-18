@@ -35,7 +35,7 @@ namespace StockFlowPro.Controllers
                 .SumAsync(o => o.TotalAmount);
 
             var topProductsQuery = await _context.OrderItems
-                .Where(oi => oi.Order.OrderStatus == OrderStatus.Delivered)
+                .Where(oi => oi.Order != null && oi.Order.OrderStatus == OrderStatus.Delivered)
                 .GroupBy(oi => oi.ProductId)
                 .Select(g => new 
                 {
@@ -51,7 +51,7 @@ namespace StockFlowPro.Controllers
             var products = await _context.Products.Where(p => productIds.Contains(p.Id)).ToListAsync();
             
             var totalSoldUnits = await _context.OrderItems
-                .Where(oi => oi.Order.OrderStatus == OrderStatus.Delivered)
+                .Where(oi => oi.Order != null && oi.Order.OrderStatus == OrderStatus.Delivered)
                 .SumAsync(oi => oi.Quantity);
 
             var topProducts = topProductsQuery.Select(x => 
@@ -86,8 +86,8 @@ namespace StockFlowPro.Controllers
                     {
                         Month = $"{g.Key.Month}/{g.Key.Year}",
                         Revenue = g.Sum(o => o.TotalAmount),
-                        Profit = g.Sum(o => o.OrderItems.Sum(oi => oi.TotalPrice - (oi.Quantity * oi.Product.CostPrice)))
-                    });
+                    Profit = g.Sum(o => o.OrderItems.Sum(oi => oi.TotalPrice - (oi.Quantity * (oi.Product != null ? oi.Product.CostPrice : 0))))
+                });
 
             var monthlyProfits = Enumerable.Range(0, 6)
                 .Select(offset => startMonth.AddMonths(offset))

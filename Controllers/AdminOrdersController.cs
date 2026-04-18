@@ -27,7 +27,7 @@ namespace StockFlowPro.Controllers
             var query = _context.Orders
                 .Include(o => o.Facility)
                 .Include(o => o.OrderProcessing)
-                .ThenInclude(op => op.PreparedByEmployee)
+                .ThenInclude(op => op!.PreparedByEmployee)
                 .AsQueryable();
 
             if (startDate.HasValue)
@@ -98,6 +98,13 @@ namespace StockFlowPro.Controllers
             if (order == null) return NotFound();
 
             if (newStatus == OrderStatus.Delivered && order.OrderStatus != OrderStatus.Scanned && order.OrderStatus != OrderStatus.Delivered)
+            {
+                order.OrderStatus = OrderStatus.Delivered;
+                await _context.SaveChangesAsync();
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
             {
                 return RedirectToAction(nameof(Index));
             }
